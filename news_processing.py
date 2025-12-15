@@ -149,7 +149,7 @@ def categorize_news(df):
         return 'Diğer'
     
     categorize_udf = udf(assign_category, StringType())
-    return df.withColumn('category', categorize_udf(col('content'))
+    return df.withColumn('category', categorize_udf(col('content')))
 
 def analyze_news_content(df):
     """
