@@ -1,8 +1,10 @@
 package com.bitirme.service;
 
 import com.bitirme.dto.news.NewsCreateRequest;
+import com.bitirme.entity.CrawlingLog;
 import com.bitirme.entity.News;
 import com.bitirme.entity.Source;
+import com.bitirme.repository.CrawlingLogRepository;
 import com.bitirme.repository.NewsRepository;
 import com.bitirme.repository.SourceRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class DynamicNewsCrawlerService {
     private final NewsRepository newsRepository;
     private final SourceRepository sourceRepository;
     private final NewsService newsService;
+    private final CrawlingLogRepository crawlingLogRepository;
 
     private static final List<String> USER_AGENTS = Arrays.asList(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -85,6 +88,15 @@ public class DynamicNewsCrawlerService {
     @Transactional
     public int crawlSourceFromUrl(Source source, String url, boolean isBreakingNews) {
         List<NewsCreateRequest> newsList = new ArrayList<>();
+
+        // Her tarama için log kaydı oluştur
+        CrawlingLog crawlingLog = new CrawlingLog();
+        crawlingLog.setSource(source);
+        crawlingLog.setStatus("RUNNING");
+        crawlingLog.setFetchedCount(0);
+        crawlingLogRepository.save(crawlingLog);
+
+        int savedCount = 0;
 
         try {
             // Retry mekanizması ile bağlantı kurma
@@ -278,7 +290,6 @@ public class DynamicNewsCrawlerService {
                     source.getName(), processedCount, newsList.size());
             
             // Veritabanına kaydet - duplicate kontrolü ile
-            int savedCount = 0;
             int duplicateCount = 0;
             int externalIdDuplicateCount = 0;
             int titleDuplicateCount = 0;
@@ -326,13 +337,31 @@ public class DynamicNewsCrawlerService {
             log.info("Source {}: Total {} news fetched and saved to database ({} duplicates skipped)", 
                     source.getName(), savedCount, duplicateCount);
 
+            // Log kaydını güncelle
+            crawlingLog.setStatus("SUCCESS");
+            crawlingLog.setFetchedCount(savedCount);
+            crawlingLog.setFinishedAt(LocalDateTime.now());
+            crawlingLogRepository.save(crawlingLog);
+
             return savedCount;
         } catch (org.jsoup.HttpStatusException httpEx) {
             log.warn("HTTP error crawling source {} from URL {}: Status={}, URL=[{}]", 
                     source.getName(), url, httpEx.getStatusCode(), url);
+
+            crawlingLog.setStatus("FAILED");
+            crawlingLog.setErrorMessage("HTTP " + httpEx.getStatusCode() + " - " + httpEx.getMessage());
+            crawlingLog.setFinishedAt(LocalDateTime.now());
+            crawlingLogRepository.save(crawlingLog);
+
             return 0;
         } catch (Exception e) {
             log.error("Error crawling source {} from URL {}: {}", source.getName(), url, e.getMessage());
+
+            crawlingLog.setStatus("FAILED");
+            crawlingLog.setErrorMessage(e.getMessage());
+            crawlingLog.setFinishedAt(LocalDateTime.now());
+            crawlingLogRepository.save(crawlingLog);
+
             return 0;
         }
     }

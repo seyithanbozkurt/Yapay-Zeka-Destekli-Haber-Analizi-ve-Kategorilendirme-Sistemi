@@ -5,19 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="bd994731-3d1b-4695-9825-9633dbd38be5" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/sparkBigData 2.iml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/category_distribution.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/news_processing.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/schema.sql" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/source_category_distribution.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/title_analysis.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/DynamicNewsCrawlerService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/DynamicNewsCrawlerService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -79,7 +68,7 @@
     "Spring Boot.BitirmeProjesiApplication (1).executor": "Run",
     "Spring Boot.BitirmeProjesiApplication.executor": "Run",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "feature/db-schema-design",
+    "git-widget-placeholder": "feature/news-crawler-classification-api",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/Users/metehansargin/Desktop/bitirme-projesi",
@@ -119,11 +108,22 @@
       <workItem from="1765893209767" duration="3665000" />
       <workItem from="1765923845988" duration="4779000" />
       <workItem from="1765981123164" duration="21188000" />
-      <workItem from="1766387270388" duration="1734000" />
+      <workItem from="1766387270388" duration="7954000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
 </project>
