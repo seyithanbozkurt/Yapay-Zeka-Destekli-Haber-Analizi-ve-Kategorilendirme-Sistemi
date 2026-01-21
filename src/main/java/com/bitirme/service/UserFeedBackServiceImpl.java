@@ -8,6 +8,7 @@ import com.bitirme.entity.ModelVersion;
 import com.bitirme.entity.News;
 import com.bitirme.entity.User;
 import com.bitirme.entity.UserFeedBack;
+import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.CategoryRepository;
 import com.bitirme.repository.ModelVersionRepository;
 import com.bitirme.repository.NewsRepository;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,10 +34,10 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
     @Transactional
     public UserFeedBackResponse create(UserFeedBackCreateRequest request) {
         News news = newsRepository.findById(request.getNewsId())
-                .orElseThrow(() -> new RuntimeException("News not found with id: " + request.getNewsId()));
+                .orElseThrow(() -> new NotFoundException("Haber bulunamadı: " + request.getNewsId()));
 
         User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getUserId()));
+                .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + request.getUserId()));
 
         UserFeedBack feedback = new UserFeedBack();
         feedback.setNews(news);
@@ -47,18 +47,18 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
 
         if (request.getModelVersionId() != null) {
             ModelVersion modelVersion = modelVersionRepository.findById(request.getModelVersionId())
-                    .orElseThrow(() -> new RuntimeException("ModelVersion not found with id: " + request.getModelVersionId()));
+                    .orElseThrow(() -> new NotFoundException("Model versiyonu bulunamadı: " + request.getModelVersionId()));
             feedback.setModelVersion(modelVersion);
         }
 
         if (request.getCurrentPredictedCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCurrentPredictedCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCurrentPredictedCategoryId()));
+                    .orElseThrow(() -> new NotFoundException("Kategori bulunamadi: " + request.getCurrentPredictedCategoryId()));
             feedback.setCurrentPredictedCategory(category);
         }
 
         Category userSelectedCategory = categoryRepository.findById(request.getUserSelectedCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getUserSelectedCategoryId()));
+                .orElseThrow(() -> new NotFoundException("Kategori bulunamadi: " + request.getUserSelectedCategoryId()));
         feedback.setUserSelectedCategory(userSelectedCategory);
 
         UserFeedBack saved = userFeedBackRepository.save(feedback);
@@ -69,7 +69,7 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
     @Transactional(readOnly = true)
     public UserFeedBackResponse getById(Long id) {
         UserFeedBack feedback = userFeedBackRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("UserFeedBack not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Kullanıcı geri bildirimi bulunamadi: " + id));
         return toResponse(feedback);
     }
 
@@ -78,30 +78,30 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
     public List<UserFeedBackResponse> getAll() {
         return userFeedBackRepository.findAll().stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     @Transactional
     public UserFeedBackResponse update(Long id, UserFeedBackUpdateRequest request) {
         UserFeedBack feedback = userFeedBackRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("UserFeedBack not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Kullanıcı geri bildirimi bulunamadi: " + id));
 
         if (request.getModelVersionId() != null) {
             ModelVersion modelVersion = modelVersionRepository.findById(request.getModelVersionId())
-                    .orElseThrow(() -> new RuntimeException("ModelVersion not found with id: " + request.getModelVersionId()));
+                    .orElseThrow(() -> new NotFoundException("Model versiyonu bulunamadi: " + request.getModelVersionId()));
             feedback.setModelVersion(modelVersion);
         }
 
         if (request.getCurrentPredictedCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCurrentPredictedCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCurrentPredictedCategoryId()));
+                    .orElseThrow(() -> new NotFoundException("Kategori bulunamadı: " + request.getCurrentPredictedCategoryId()));
             feedback.setCurrentPredictedCategory(category);
         }
 
         if (request.getUserSelectedCategoryId() != null) {
             Category category = categoryRepository.findById(request.getUserSelectedCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getUserSelectedCategoryId()));
+                    .orElseThrow(() -> new NotFoundException("Kategori bulunamadı: " + request.getUserSelectedCategoryId()));
             feedback.setUserSelectedCategory(category);
         }
 
@@ -121,7 +121,7 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
     @Transactional
     public void delete(Long id) {
         if (!userFeedBackRepository.existsById(id)) {
-            throw new RuntimeException("UserFeedBack not found with id: " + id);
+            throw new NotFoundException("Kullanıcı geri bildirimi bulunamadı: " + id);
         }
         userFeedBackRepository.deleteById(id);
     }
@@ -129,23 +129,17 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
     private UserFeedBackResponse toResponse(UserFeedBack feedback) {
         UserFeedBackResponse response = new UserFeedBackResponse();
         response.setId(feedback.getId());
-        response.setNewsId(feedback.getNews().getId());
         response.setNewsTitle(feedback.getNews().getTitle());
-        response.setUserId(feedback.getUser().getId());
         response.setUsername(feedback.getUser().getUsername());
         if (feedback.getModelVersion() != null) {
-            response.setModelVersionId(feedback.getModelVersion().getId());
             response.setModelVersionName(feedback.getModelVersion().getName());
         }
         if (feedback.getCurrentPredictedCategory() != null) {
-            response.setCurrentPredictedCategoryId(feedback.getCurrentPredictedCategory().getId());
             response.setCurrentPredictedCategoryName(feedback.getCurrentPredictedCategory().getName());
         }
-        response.setUserSelectedCategoryId(feedback.getUserSelectedCategory().getId());
         response.setUserSelectedCategoryName(feedback.getUserSelectedCategory().getName());
         response.setFeedbackType(feedback.getFeedbackType());
         response.setComment(feedback.getComment());
-        response.setCreatedAt(feedback.getCreatedAt());
         return response;
     }
 }

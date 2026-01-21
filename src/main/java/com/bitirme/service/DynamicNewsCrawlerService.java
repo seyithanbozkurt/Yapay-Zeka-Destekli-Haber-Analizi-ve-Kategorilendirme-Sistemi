@@ -122,7 +122,7 @@ public class DynamicNewsCrawlerService {
                             Thread.sleep(retryDelay);
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
-                            throw new RuntimeException("Interrupted during retry delay", ie);
+                            throw new com.bitirme.exception.BusinessException("Retry sırasında kesinti oluştu", ie);
                         }
                         retryDelay *= 2; // Exponential backoff
                         continue;
@@ -137,7 +137,7 @@ public class DynamicNewsCrawlerService {
                             Thread.sleep(retryDelay);
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
-                            throw new RuntimeException("Interrupted during retry delay", ie);
+                            throw new com.bitirme.exception.BusinessException("Retry sırasında kesinti oluştu", ie);
                         }
                         retryDelay *= 2; // Exponential backoff
                         continue;
@@ -147,7 +147,7 @@ public class DynamicNewsCrawlerService {
             }
             
             if (doc == null) {
-                throw new RuntimeException("Failed to fetch document after " + maxRetries + " attempts");
+                throw new com.bitirme.exception.BusinessException("Belge " + maxRetries + " deneme sonrasında alınamadı");
             }
 
             // Dinamik selector'lar kullan

@@ -54,15 +54,15 @@ public class NewsClassificationResultController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Sınıflandırma sonucu güncelle", description = "Mevcut bir sınıflandırma sonucunun bilgilerini günceller")
+    @PutMapping
+    @Operation(summary = "Sınıflandırma sonucu güncelle", description = "Mevcut bir sınıflandırma sonucunun bilgilerini günceller. ID request body'den alınır.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Sınıflandırma sonucu başarıyla güncellendi"),
             @ApiResponse(responseCode = "404", description = "Sınıflandırma sonucu bulunamadı"),
             @ApiResponse(responseCode = "400", description = "Geçersiz istek")
     })
-    public ResponseEntity<NewsClassificationResultResponse> update(@PathVariable Long id, @RequestBody NewsClassificationResultUpdateRequest request) {
-        NewsClassificationResultResponse response = newsClassificationResultService.update(id, request);
+    public ResponseEntity<NewsClassificationResultResponse> update(@RequestBody NewsClassificationResultUpdateRequest request) {
+        NewsClassificationResultResponse response = newsClassificationResultService.update(request.getId(), request);
         return ResponseEntity.ok(response);
     }
 

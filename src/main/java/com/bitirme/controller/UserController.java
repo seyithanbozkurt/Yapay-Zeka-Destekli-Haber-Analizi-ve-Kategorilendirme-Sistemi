@@ -54,15 +54,15 @@ public class UserController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Kullanıcı güncelle", description = "Mevcut bir kullanıcının bilgilerini günceller")
+    @PutMapping
+    @Operation(summary = "Kullanıcı güncelle", description = "Mevcut bir kullanıcının bilgilerini günceller. ID request body'den alınır.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Kullanıcı başarıyla güncellendi"),
             @ApiResponse(responseCode = "404", description = "Kullanıcı bulunamadı"),
             @ApiResponse(responseCode = "400", description = "Geçersiz istek")
     })
-    public ResponseEntity<UserResponse> update(@PathVariable Long id, @RequestBody UserUpdateRequest request) {
-        UserResponse response = userService.update(id, request);
+    public ResponseEntity<UserResponse> update(@RequestBody UserUpdateRequest request) {
+        UserResponse response = userService.update(request.getId(), request);
         return ResponseEntity.ok(response);
     }
 

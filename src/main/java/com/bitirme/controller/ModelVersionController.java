@@ -54,15 +54,15 @@ public class ModelVersionController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Model versiyonu güncelle", description = "Mevcut bir model versiyonunun bilgilerini günceller")
+    @PutMapping
+    @Operation(summary = "Model versiyonu güncelle", description = "Mevcut bir model versiyonunun bilgilerini günceller. ID request body'den alınır.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Model versiyonu başarıyla güncellendi"),
             @ApiResponse(responseCode = "404", description = "Model versiyonu bulunamadı"),
             @ApiResponse(responseCode = "400", description = "Geçersiz istek")
     })
-    public ResponseEntity<ModelVersionResponse> update(@PathVariable Integer id, @RequestBody ModelVersionUpdateRequest request) {
-        ModelVersionResponse response = modelVersionService.update(id, request);
+    public ResponseEntity<ModelVersionResponse> update(@RequestBody ModelVersionUpdateRequest request) {
+        ModelVersionResponse response = modelVersionService.update(request.getId(), request);
         return ResponseEntity.ok(response);
     }
 

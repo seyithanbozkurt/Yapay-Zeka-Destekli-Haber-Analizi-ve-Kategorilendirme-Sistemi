@@ -54,15 +54,15 @@ public class SourceController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Haber kaynağı güncelle", description = "Mevcut bir haber kaynağının bilgilerini günceller")
+    @PutMapping
+    @Operation(summary = "Haber kaynağı güncelle", description = "Mevcut bir haber kaynağının bilgilerini günceller. ID request body'den alınır.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Haber kaynağı başarıyla güncellendi"),
             @ApiResponse(responseCode = "404", description = "Haber kaynağı bulunamadı"),
             @ApiResponse(responseCode = "400", description = "Geçersiz istek")
     })
-    public ResponseEntity<SourceResponse> update(@PathVariable Integer id, @RequestBody SourceUpdateRequest request) {
-        SourceResponse response = sourceService.update(id, request);
+    public ResponseEntity<SourceResponse> update(@RequestBody SourceUpdateRequest request) {
+        SourceResponse response = sourceService.update(request.getId(), request);
         return ResponseEntity.ok(response);
     }
 

@@ -67,7 +67,7 @@ public class NewsServiceImpl implements NewsService {
     public List<NewsResponse> getAll() {
         return newsRepository.findAll().stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -135,21 +135,13 @@ public class NewsServiceImpl implements NewsService {
     private NewsResponse toResponse(News news) {
         NewsResponse response = new NewsResponse();
         response.setId(news.getId());
-        response.setSourceId(news.getSource().getId());
         response.setSourceName(news.getSource().getName());
-        response.setExternalId(news.getExternalId());
         response.setTitle(news.getTitle());
         response.setContent(news.getContent());
         response.setOriginalUrl(news.getOriginalUrl());
         response.setLanguage(news.getLanguage());
         response.setPublishedAt(news.getPublishedAt());
-        response.setFetchedAt(news.getFetchedAt());
         response.setProcessed(news.getProcessed());
-        response.setCreatedAt(news.getCreatedAt());
-        response.setUpdatedAt(news.getUpdatedAt());
-        response.setCategoryIds(news.getCategories().stream()
-                .map(Category::getId)
-                .collect(Collectors.toSet()));
         response.setCategoryNames(news.getCategories().stream()
                 .map(Category::getName)
                 .collect(Collectors.toSet()));

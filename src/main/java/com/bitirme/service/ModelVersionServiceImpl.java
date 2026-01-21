@@ -5,6 +5,7 @@ import com.bitirme.dto.model.ModelVersionResponse;
 import com.bitirme.dto.model.ModelVersionUpdateRequest;
 import com.bitirme.entity.ModelVersion;
 import com.bitirme.entity.User;
+import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.ModelVersionRepository;
 import com.bitirme.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +30,7 @@ public class ModelVersionServiceImpl implements ModelVersionService {
 
         if (request.getCreatedById() != null) {
             User user = userRepository.findById(request.getCreatedById())
-                    .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getCreatedById()));
+                    .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + request.getCreatedById()));
             modelVersion.setCreatedBy(user);
         }
 
@@ -42,7 +42,7 @@ public class ModelVersionServiceImpl implements ModelVersionService {
     @Transactional(readOnly = true)
     public ModelVersionResponse getById(Integer id) {
         ModelVersion modelVersion = modelVersionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("ModelVersion not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Model versiyonu bulunamadı: " + id));
         return toResponse(modelVersion);
     }
 
@@ -51,14 +51,14 @@ public class ModelVersionServiceImpl implements ModelVersionService {
     public List<ModelVersionResponse> getAll() {
         return modelVersionRepository.findAll().stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     @Transactional
     public ModelVersionResponse update(Integer id, ModelVersionUpdateRequest request) {
         ModelVersion modelVersion = modelVersionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("ModelVersion not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Model versiyonu bulunamadı: " + id));
 
         if (request.getName() != null) {
             modelVersion.setName(request.getName());
@@ -76,7 +76,7 @@ public class ModelVersionServiceImpl implements ModelVersionService {
     @Transactional
     public void delete(Integer id) {
         if (!modelVersionRepository.existsById(id)) {
-            throw new RuntimeException("ModelVersion not found with id: " + id);
+            throw new NotFoundException("Model versiyonu bulunamadı: " + id);
         }
         modelVersionRepository.deleteById(id);
     }
@@ -86,9 +86,7 @@ public class ModelVersionServiceImpl implements ModelVersionService {
         response.setId(modelVersion.getId());
         response.setName(modelVersion.getName());
         response.setDescription(modelVersion.getDescription());
-        response.setCreatedAt(modelVersion.getCreatedAt());
         if (modelVersion.getCreatedBy() != null) {
-            response.setCreatedById(modelVersion.getCreatedBy().getId());
             response.setCreatedByUsername(modelVersion.getCreatedBy().getUsername());
         }
         return response;

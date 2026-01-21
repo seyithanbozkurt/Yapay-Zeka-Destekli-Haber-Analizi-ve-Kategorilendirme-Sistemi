@@ -4,13 +4,14 @@ import com.bitirme.dto.user.RoleCreateRequest;
 import com.bitirme.dto.user.RoleResponse;
 import com.bitirme.dto.user.RoleUpdateRequest;
 import com.bitirme.entity.Role;
+import com.bitirme.exception.AlreadyExistsException;
+import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +23,7 @@ public class RoleServiceImpl implements RoleService {
     @Transactional
     public RoleResponse create(RoleCreateRequest request) {
         if (roleRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Role already exists with name: " + request.getName());
+            throw new AlreadyExistsException("Rol adı zaten kullanılıyor: " + request.getName());
         }
 
         Role role = new Role();
@@ -37,7 +38,7 @@ public class RoleServiceImpl implements RoleService {
     @Transactional(readOnly = true)
     public RoleResponse getById(Integer id) {
         Role role = roleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Role not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Rol bulunamadı: " + id));
         return toResponse(role);
     }
 
@@ -46,18 +47,18 @@ public class RoleServiceImpl implements RoleService {
     public List<RoleResponse> getAll() {
         return roleRepository.findAll().stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     @Transactional
     public RoleResponse update(Integer id, RoleUpdateRequest request) {
         Role role = roleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Role not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Rol bulunamadı: " + id));
 
         if (request.getName() != null && !request.getName().equals(role.getName())) {
             if (roleRepository.existsByName(request.getName())) {
-                throw new RuntimeException("Role already exists with name: " + request.getName());
+                throw new AlreadyExistsException("Rol adı zaten kullanılıyor: " + request.getName());
             }
             role.setName(request.getName());
         }
@@ -74,7 +75,7 @@ public class RoleServiceImpl implements RoleService {
     @Transactional
     public void delete(Integer id) {
         if (!roleRepository.existsById(id)) {
-            throw new RuntimeException("Role not found with id: " + id);
+            throw new NotFoundException("Rol bulunamadı: " + id);
         }
         roleRepository.deleteById(id);
     }

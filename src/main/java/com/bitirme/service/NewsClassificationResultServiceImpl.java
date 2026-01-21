@@ -7,6 +7,7 @@ import com.bitirme.entity.Category;
 import com.bitirme.entity.ModelVersion;
 import com.bitirme.entity.News;
 import com.bitirme.entity.NewsClassificationResult;
+import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.CategoryRepository;
 import com.bitirme.repository.ModelVersionRepository;
 import com.bitirme.repository.NewsClassificationResultRepository;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,13 +31,13 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
     @Transactional
     public NewsClassificationResultResponse create(NewsClassificationResultCreateRequest request) {
         News news = newsRepository.findById(request.getNewsId())
-                .orElseThrow(() -> new RuntimeException("News not found with id: " + request.getNewsId()));
+                .orElseThrow(() -> new NotFoundException("Haber bulunamadı: " + request.getNewsId()));
 
         ModelVersion modelVersion = modelVersionRepository.findById(request.getModelVersionId())
-                .orElseThrow(() -> new RuntimeException("ModelVersion not found with id: " + request.getModelVersionId()));
+                .orElseThrow(() -> new NotFoundException("Model versiyonu bulunamadı: " + request.getModelVersionId()));
 
         Category category = categoryRepository.findById(request.getPredictedCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getPredictedCategoryId()));
+                .orElseThrow(() -> new NotFoundException("Kategori bulunamadı: " + request.getPredictedCategoryId()));
 
         NewsClassificationResult result = new NewsClassificationResult();
         result.setNews(news);
@@ -54,7 +54,7 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
     @Transactional(readOnly = true)
     public NewsClassificationResultResponse getById(Long id) {
         NewsClassificationResult result = newsClassificationResultRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("NewsClassificationResult not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Sınıflandırma sonucu bulunamadı: " + id));
         return toResponse(result);
     }
 
@@ -63,24 +63,24 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
     public List<NewsClassificationResultResponse> getAll() {
         return newsClassificationResultRepository.findAll().stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     @Transactional
     public NewsClassificationResultResponse update(Long id, NewsClassificationResultUpdateRequest request) {
         NewsClassificationResult result = newsClassificationResultRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("NewsClassificationResult not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Sınıflandırma sonucu bulunamadı: " + id));
 
         if (request.getModelVersionId() != null) {
             ModelVersion modelVersion = modelVersionRepository.findById(request.getModelVersionId())
-                    .orElseThrow(() -> new RuntimeException("ModelVersion not found with id: " + request.getModelVersionId()));
+                    .orElseThrow(() -> new NotFoundException("Model versiyonu bulunamadı: " + request.getModelVersionId()));
             result.setModelVersion(modelVersion);
         }
 
         if (request.getPredictedCategoryId() != null) {
             Category category = categoryRepository.findById(request.getPredictedCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getPredictedCategoryId()));
+                    .orElseThrow(() -> new NotFoundException("Kategori bulunamadı: " + request.getPredictedCategoryId()));
             result.setPredictedCategory(category);
         }
 
@@ -100,7 +100,7 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
     @Transactional
     public void delete(Long id) {
         if (!newsClassificationResultRepository.existsById(id)) {
-            throw new RuntimeException("NewsClassificationResult not found with id: " + id);
+            throw new NotFoundException("Sınıflandırma sonucu bulunamadı: " + id);
         }
         newsClassificationResultRepository.deleteById(id);
     }
@@ -108,14 +108,10 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
     private NewsClassificationResultResponse toResponse(NewsClassificationResult result) {
         NewsClassificationResultResponse response = new NewsClassificationResultResponse();
         response.setId(result.getId());
-        response.setNewsId(result.getNews().getId());
         response.setNewsTitle(result.getNews().getTitle());
-        response.setModelVersionId(result.getModelVersion().getId());
         response.setModelVersionName(result.getModelVersion().getName());
-        response.setPredictedCategoryId(result.getPredictedCategory().getId());
         response.setPredictedCategoryName(result.getPredictedCategory().getName());
         response.setPredictionScore(result.getPredictionScore());
-        response.setClassifiedAt(result.getClassifiedAt());
         response.setActive(result.getActive());
         return response;
     }

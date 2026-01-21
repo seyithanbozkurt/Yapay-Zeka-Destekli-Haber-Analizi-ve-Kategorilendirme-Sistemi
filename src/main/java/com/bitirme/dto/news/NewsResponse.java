@@ -1,5 +1,6 @@
 package com.bitirme.dto.news;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,20 +9,32 @@ import java.util.Set;
 
 @Getter
 @Setter
+@Schema(description = "Haber Bilgileri")
 public class NewsResponse {
+    @Schema(description = "Haber ID'si", example = "1")
     private Long id;
-    private Integer sourceId;
+    
+    @Schema(description = "Haber kaynağı adı", example = "Hürriyet")
     private String sourceName;
-    private String externalId;
+    
+    @Schema(description = "Haber başlığı", example = "Türkiye'de yeni ekonomi politikaları açıklandı")
     private String title;
+    
+    @Schema(description = "Haber içeriği", example = "Bugün yapılan açıklamada...")
     private String content;
+    
+    @Schema(description = "Orijinal haber URL'i", example = "https://www.hurriyet.com.tr/ekonomi/haber")
     private String originalUrl;
+    
+    @Schema(description = "Haber dili", example = "tr")
     private String language;
+    
+    @Schema(description = "Yayınlanma tarihi", example = "2024-01-21T10:00:00")
     private LocalDateTime publishedAt;
-    private LocalDateTime fetchedAt;
+    
+    @Schema(description = "İşlenme durumu", example = "false")
     private Boolean processed;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    private Set<Integer> categoryIds;
+    
+    @Schema(description = "Kategori isimleri", example = "[\"Ekonomi\", \"Siyaset\"]")
     private Set<String> categoryNames;
 }

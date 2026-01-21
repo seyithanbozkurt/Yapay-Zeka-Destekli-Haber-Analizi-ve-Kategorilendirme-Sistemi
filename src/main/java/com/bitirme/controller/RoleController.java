@@ -54,15 +54,15 @@ public class RoleController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Rol güncelle", description = "Mevcut bir rolün bilgilerini günceller")
+    @PutMapping
+    @Operation(summary = "Rol güncelle", description = "Mevcut bir rolün bilgilerini günceller. ID request body'den alınır.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Rol başarıyla güncellendi"),
             @ApiResponse(responseCode = "404", description = "Rol bulunamadı"),
             @ApiResponse(responseCode = "400", description = "Geçersiz istek")
     })
-    public ResponseEntity<RoleResponse> update(@PathVariable Integer id, @RequestBody RoleUpdateRequest request) {
-        RoleResponse response = roleService.update(id, request);
+    public ResponseEntity<RoleResponse> update(@RequestBody RoleUpdateRequest request) {
+        RoleResponse response = roleService.update(request.getId(), request);
         return ResponseEntity.ok(response);
     }
 

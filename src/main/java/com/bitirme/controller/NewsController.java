@@ -55,15 +55,15 @@ public class NewsController {
         return ResponseEntity.ok(ApiResponse.success(responses));
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Haber güncelle", description = "Mevcut bir haberin bilgilerini günceller")
+    @PutMapping
+    @Operation(summary = "Haber güncelle", description = "Mevcut bir haberin bilgilerini günceller. ID request body'den alınır.")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Haber başarıyla güncellendi"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Haber bulunamadı"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Geçersiz istek")
     })
-    public ResponseEntity<ApiResponse<NewsResponse>> update(@PathVariable Long id, @RequestBody NewsUpdateRequest request) {
-        NewsResponse response = newsService.update(id, request);
+    public ResponseEntity<ApiResponse<NewsResponse>> update(@RequestBody NewsUpdateRequest request) {
+        NewsResponse response = newsService.update(request.getId(), request);
         return ResponseEntity.ok(ApiResponse.success("Haber başarıyla güncellendi", response));
     }
 

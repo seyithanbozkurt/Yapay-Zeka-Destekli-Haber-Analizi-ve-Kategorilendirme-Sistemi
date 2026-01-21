@@ -4,13 +4,14 @@ import com.bitirme.dto.category.CategoryCreateRequest;
 import com.bitirme.dto.category.CategoryResponse;
 import com.bitirme.dto.category.CategoryUpdateRequest;
 import com.bitirme.entity.Category;
+import com.bitirme.exception.AlreadyExistsException;
+import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +23,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponse create(CategoryCreateRequest request) {
         if (categoryRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Category already exists with name: " + request.getName());
+            throw new AlreadyExistsException("Kategori adı zaten kullanılıyor: " + request.getName());
         }
 
         Category category = new Category();
@@ -38,7 +39,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional(readOnly = true)
     public CategoryResponse getById(Integer id) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Kategori bulunamadı: " + id));
         return toResponse(category);
     }
 
@@ -47,18 +48,18 @@ public class CategoryServiceImpl implements CategoryService {
     public List<CategoryResponse> getAll() {
         return categoryRepository.findAll().stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     @Transactional
     public CategoryResponse update(Integer id, CategoryUpdateRequest request) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Kategori bulunamadı: " + id));
 
         if (request.getName() != null && !request.getName().equals(category.getName())) {
             if (categoryRepository.existsByName(request.getName())) {
-                throw new RuntimeException("Category already exists with name: " + request.getName());
+                throw new AlreadyExistsException("Kategori adı zaten kullanılıyor: " + request.getName());
             }
             category.setName(request.getName());
         }
@@ -79,7 +80,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public void delete(Integer id) {
         if (!categoryRepository.existsById(id)) {
-            throw new RuntimeException("Category not found with id: " + id);
+            throw new NotFoundException("Kategori bulunamadı: " + id);
         }
         categoryRepository.deleteById(id);
     }

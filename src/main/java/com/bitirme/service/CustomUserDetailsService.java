@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +52,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         
         return user.getRoles().stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
-                .collect(Collectors.toList());
+                .toList();
     }
 }
 

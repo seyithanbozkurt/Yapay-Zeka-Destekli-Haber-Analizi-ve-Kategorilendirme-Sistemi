@@ -107,7 +107,7 @@ public class ScheduledTasks {
                         .map(news -> news.getPublishedAt())
                         .filter(java.util.Objects::nonNull)
                         .sorted()
-                        .collect(java.util.stream.Collectors.toList());
+                        .toList();
                 
                 if (!dates.isEmpty()) {
                     log.info("   • En eski haber: {}", dates.get(0));

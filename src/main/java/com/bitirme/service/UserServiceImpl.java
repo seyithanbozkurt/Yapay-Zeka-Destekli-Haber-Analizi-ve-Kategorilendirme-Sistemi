@@ -5,6 +5,8 @@ import com.bitirme.dto.user.UserResponse;
 import com.bitirme.dto.user.UserUpdateRequest;
 import com.bitirme.entity.Role;
 import com.bitirme.entity.User;
+import com.bitirme.exception.AlreadyExistsException;
+import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.RoleRepository;
 import com.bitirme.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +28,10 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse create(UserCreateRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username already exists: " + request.getUsername());
+            throw new AlreadyExistsException("Kullanıcı adı zaten kullanılıyor: " + request.getUsername());
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists: " + request.getEmail());
+            throw new AlreadyExistsException("E-posta adresi zaten kullanılıyor: " + request.getEmail());
         }
 
         User user = new User();
@@ -55,7 +57,7 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public UserResponse getById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + id));
         return toResponse(user);
     }
 
@@ -64,25 +66,25 @@ public class UserServiceImpl implements UserService {
     public List<UserResponse> getAll() {
         return userRepository.findAll().stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     @Transactional
     public UserResponse update(Long id, UserUpdateRequest request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + id));
 
         if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
             if (userRepository.existsByUsername(request.getUsername())) {
-                throw new RuntimeException("Username already exists: " + request.getUsername());
+                throw new AlreadyExistsException("Kullanıcı adı zaten kullanılıyor: " + request.getUsername());
             }
             user.setUsername(request.getUsername());
         }
 
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new RuntimeException("Email already exists: " + request.getEmail());
+                throw new AlreadyExistsException("E-posta adresi zaten kullanılıyor: " + request.getEmail());
             }
             user.setEmail(request.getEmail());
         }
@@ -112,7 +114,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void delete(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found with id: " + id);
+            throw new NotFoundException("Kullanıcı bulunamadı: " + id);
         }
         userRepository.deleteById(id);
     }
@@ -123,8 +125,6 @@ public class UserServiceImpl implements UserService {
         response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
         response.setActive(user.getActive());
-        response.setCreatedAt(user.getCreatedAt());
-        response.setUpdatedAt(user.getUpdatedAt());
         response.setRoles(user.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toSet()));

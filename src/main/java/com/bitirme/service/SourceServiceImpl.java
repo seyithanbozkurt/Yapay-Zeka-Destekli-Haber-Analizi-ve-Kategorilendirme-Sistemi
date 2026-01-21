@@ -4,13 +4,14 @@ import com.bitirme.dto.source.SourceCreateRequest;
 import com.bitirme.dto.source.SourceResponse;
 import com.bitirme.dto.source.SourceUpdateRequest;
 import com.bitirme.entity.Source;
+import com.bitirme.exception.AlreadyExistsException;
+import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.SourceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +23,7 @@ public class SourceServiceImpl implements SourceService {
     @Transactional
     public SourceResponse create(SourceCreateRequest request) {
         if (sourceRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Source already exists with name: " + request.getName());
+            throw new AlreadyExistsException("Haber kaynağı adı zaten kullanılıyor: " + request.getName());
         }
 
         Source source = new Source();
@@ -45,7 +46,7 @@ public class SourceServiceImpl implements SourceService {
     @Transactional(readOnly = true)
     public SourceResponse getById(Integer id) {
         Source source = sourceRepository.findById(id)
-                .orElseThrow(() -> new com.bitirme.exception.NotFoundException("Kaynak bulunamadı: " + id));
+                .orElseThrow(() -> new NotFoundException("Kaynak bulunamadı: " + id));
         return toResponse(source);
     }
 
@@ -54,18 +55,18 @@ public class SourceServiceImpl implements SourceService {
     public List<SourceResponse> getAll() {
         return sourceRepository.findAll().stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     @Transactional
     public SourceResponse update(Integer id, SourceUpdateRequest request) {
         Source source = sourceRepository.findById(id)
-                .orElseThrow(() -> new com.bitirme.exception.NotFoundException("Kaynak bulunamadı: " + id));
+                .orElseThrow(() -> new NotFoundException("Kaynak bulunamadı: " + id));
 
         if (request.getName() != null && !request.getName().equals(source.getName())) {
             if (sourceRepository.existsByName(request.getName())) {
-                throw new com.bitirme.exception.BusinessException("Kaynak zaten mevcut: " + request.getName());
+                throw new AlreadyExistsException("Haber kaynağı adı zaten kullanılıyor: " + request.getName());
             }
             source.setName(request.getName());
         }
@@ -114,7 +115,7 @@ public class SourceServiceImpl implements SourceService {
     @Transactional
     public void delete(Integer id) {
         if (!sourceRepository.existsById(id)) {
-            throw new RuntimeException("Source not found with id: " + id);
+            throw new NotFoundException("Kaynak bulunamadı: " + id);
         }
         sourceRepository.deleteById(id);
     }
@@ -126,11 +127,7 @@ public class SourceServiceImpl implements SourceService {
         response.setBaseUrl(source.getBaseUrl());
         response.setCategoryPath(source.getCategoryPath());
         response.setActive(source.getActive());
-        response.setCreatedAt(source.getCreatedAt());
         response.setCrawlUrl(source.getCrawlUrl());
-        response.setTitleSelector(source.getTitleSelector());
-        response.setContentSelector(source.getContentSelector());
-        response.setLinkSelector(source.getLinkSelector());
         response.setCrawlType(source.getCrawlType());
         response.setLastMinuteUrl(source.getLastMinuteUrl());
         return response;

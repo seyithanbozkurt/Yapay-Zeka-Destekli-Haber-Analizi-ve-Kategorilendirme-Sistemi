@@ -54,15 +54,15 @@ public class CategoryController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Kategori güncelle", description = "Mevcut bir kategorinin bilgilerini günceller")
+    @PutMapping
+    @Operation(summary = "Kategori güncelle", description = "Mevcut bir kategorinin bilgilerini günceller. ID request body'den alınır.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Kategori başarıyla güncellendi"),
             @ApiResponse(responseCode = "404", description = "Kategori bulunamadı"),
             @ApiResponse(responseCode = "400", description = "Geçersiz istek")
     })
-    public ResponseEntity<CategoryResponse> update(@PathVariable Integer id, @RequestBody CategoryUpdateRequest request) {
-        CategoryResponse response = categoryService.update(id, request);
+    public ResponseEntity<CategoryResponse> update(@RequestBody CategoryUpdateRequest request) {
+        CategoryResponse response = categoryService.update(request.getId(), request);
         return ResponseEntity.ok(response);
     }
 

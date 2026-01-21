@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/crawling-logs")
@@ -30,7 +29,7 @@ public class CrawlingLogController {
         List<CrawlingLogResponse> logs = crawlingLogRepository.findAll()
                 .stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(ApiResponse.success(logs));
     }
 
@@ -40,7 +39,7 @@ public class CrawlingLogController {
         List<CrawlingLogResponse> logs = crawlingLogRepository.findBySourceId(sourceId)
                 .stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(ApiResponse.success(logs));
     }
 
@@ -50,14 +49,12 @@ public class CrawlingLogController {
         List<CrawlingLogResponse> logs = crawlingLogRepository.findByStatus(status)
                 .stream()
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .toList();
         return ResponseEntity.ok(ApiResponse.success(logs));
     }
 
     private CrawlingLogResponse toResponse(CrawlingLog log) {
         return CrawlingLogResponse.builder()
-                .id(log.getId())
-                .sourceId(log.getSource() != null ? log.getSource().getId() : null)
                 .sourceName(log.getSource() != null ? log.getSource().getName() : null)
                 .startedAt(log.getStartedAt())
                 .finishedAt(log.getFinishedAt())

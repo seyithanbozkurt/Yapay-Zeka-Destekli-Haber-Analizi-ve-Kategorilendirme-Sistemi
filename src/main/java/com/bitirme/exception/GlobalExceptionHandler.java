@@ -27,6 +27,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(e.getMessage()));
     }
 
+    @ExceptionHandler(AlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAlreadyExistsException(AlreadyExistsException e) {
+        log.error("Already exists exception: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(e.getMessage()));
+    }
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Object>> handleBusinessException(BusinessException e) {
         log.error("Business exception: {}", e.getMessage());

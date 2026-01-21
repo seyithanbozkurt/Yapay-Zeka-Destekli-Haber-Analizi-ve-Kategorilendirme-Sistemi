@@ -54,15 +54,15 @@ public class UserFeedBackController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Kullanıcı geri bildirimi güncelle", description = "Mevcut bir kullanıcı geri bildiriminin bilgilerini günceller")
+    @PutMapping
+    @Operation(summary = "Kullanıcı geri bildirimi güncelle", description = "Mevcut bir kullanıcı geri bildiriminin bilgilerini günceller. ID request body'den alınır.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Kullanıcı geri bildirimi başarıyla güncellendi"),
             @ApiResponse(responseCode = "404", description = "Kullanıcı geri bildirimi bulunamadı"),
             @ApiResponse(responseCode = "400", description = "Geçersiz istek")
     })
-    public ResponseEntity<UserFeedBackResponse> update(@PathVariable Long id, @RequestBody UserFeedBackUpdateRequest request) {
-        UserFeedBackResponse response = userFeedBackService.update(id, request);
+    public ResponseEntity<UserFeedBackResponse> update(@RequestBody UserFeedBackUpdateRequest request) {
+        UserFeedBackResponse response = userFeedBackService.update(request.getId(), request);
         return ResponseEntity.ok(response);
     }
 
