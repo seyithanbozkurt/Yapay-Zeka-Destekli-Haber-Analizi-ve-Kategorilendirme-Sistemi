@@ -13,6 +13,10 @@ import java.util.Optional;
 @Repository
 public interface NewsRepository extends JpaRepository<News, Long> {
     Optional<News> findByExternalIdAndSourceId(String externalId, Integer sourceId);
+
+    /** Aynı kaynaktan aynı normalize başlığa sahip haber var mı (Takvim vb. aynı haber farklı URL tekrarını engeller). */
+    boolean existsBySourceIdAndNormalizedTitle(Integer sourceId, String normalizedTitle);
+
     List<News> findBySourceId(Integer sourceId);
     List<News> findByProcessedFalse();
     List<News> findByPublishedAtBetween(LocalDateTime start, LocalDateTime end);
@@ -20,13 +24,11 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     @Query("SELECT n FROM News n WHERE n.source.id = :sourceId AND n.publishedAt >= :fromDate")
     List<News> findBySourceIdAndPublishedAfter(@Param("sourceId") Integer sourceId, @Param("fromDate") LocalDateTime fromDate);
     
-    /**
-     * Normalize edilmiş title'a göre benzer haberleri bulur.
-     * Java tarafında normalize edilmiş title ile veritabanındaki title'ları karşılaştırır.
-     * PostgreSQL native query kullanarak REGEXP_REPLACE ile özel karakterleri temizler.
-     */
-    @Query(value = "SELECT * FROM news WHERE LOWER(REGEXP_REPLACE(title, '[^a-zA-ZçğıöşüÇĞIİÖŞÜ0-9\\s]', '', 'g')) = LOWER(:normalizedTitle)", nativeQuery = true)
-    List<News> findByNormalizedTitle(@Param("normalizedTitle") String normalizedTitle);
+    /** Normalize edilmiş başlığa göre haberleri bulur (normalized_title kolonu kullanılır). */
+    List<News> findByNormalizedTitle(String normalizedTitle);
+
+    /** normalized_title boş olan haberler (backfill için). */
+    List<News> findByNormalizedTitleIsNull();
 }
 
 

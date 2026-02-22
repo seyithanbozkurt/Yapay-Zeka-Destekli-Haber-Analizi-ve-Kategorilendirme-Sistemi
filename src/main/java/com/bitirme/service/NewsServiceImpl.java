@@ -9,6 +9,7 @@ import com.bitirme.entity.Source;
 import com.bitirme.repository.CategoryRepository;
 import com.bitirme.repository.NewsRepository;
 import com.bitirme.repository.SourceRepository;
+import com.bitirme.util.NewsTitleNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ public class NewsServiceImpl implements NewsService {
         news.setSource(source);
         news.setExternalId(request.getExternalId());
         news.setTitle(request.getTitle());
+        news.setNormalizedTitle(NewsTitleNormalizer.normalize(request.getTitle()));
         news.setContent(request.getContent());
         news.setOriginalUrl(request.getOriginalUrl());
         news.setLanguage(request.getLanguage() != null ? request.getLanguage() : "tr");
@@ -88,6 +90,7 @@ public class NewsServiceImpl implements NewsService {
 
         if (request.getTitle() != null) {
             news.setTitle(request.getTitle());
+            news.setNormalizedTitle(NewsTitleNormalizer.normalize(request.getTitle()));
         }
 
         if (request.getContent() != null) {

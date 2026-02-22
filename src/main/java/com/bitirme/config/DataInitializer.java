@@ -5,11 +5,14 @@ import com.bitirme.entity.ModelVersion;
 import com.bitirme.entity.Role;
 import com.bitirme.entity.Source;
 import com.bitirme.entity.User;
+import com.bitirme.entity.News;
 import com.bitirme.repository.CategoryRepository;
 import com.bitirme.repository.ModelVersionRepository;
+import com.bitirme.repository.NewsRepository;
 import com.bitirme.repository.RoleRepository;
 import com.bitirme.repository.SourceRepository;
 import com.bitirme.repository.UserRepository;
+import com.bitirme.util.NewsTitleNormalizer;
 import com.bitirme.service.NewsCrawlerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +21,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -31,6 +33,7 @@ public class DataInitializer implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final SourceRepository sourceRepository;
     private final ModelVersionRepository modelVersionRepository;
+    private final NewsRepository newsRepository;
     private final NewsCrawlerService newsCrawlerService;
     private final PasswordEncoder passwordEncoder;
 
@@ -42,6 +45,7 @@ public class DataInitializer implements CommandLineRunner {
         initializeCategories();
         initializeSources();
         initializeModelVersion();
+        backfillNormalizedTitle();
         log.info("Data initialization completed!");
         
         // Uygulama başladığında ilk haber çekme işlemini başlat
@@ -326,22 +330,7 @@ public class DataInitializer implements CommandLineRunner {
             ModelVersion modelVersion = new ModelVersion();
             modelVersion.setName(modelVersionName);
             modelVersion.setDescription("Anahtar kelime tabanlı kategorilendirme modeli");
-            
-            // Admin kullanıcısını createdBy olarak ata (varsa)
-            Optional<User> adminUser = userRepository.findByUsername("admin");
-            if (adminUser.isPresent()) {
-                modelVersion.setCreatedBy(adminUser.get());
-            } else {
-                // Admin yoksa metehan veya seyithan'ı kullan
-                Optional<User> metehanUser = userRepository.findByUsername("metehan");
-                if (metehanUser.isPresent()) {
-                    modelVersion.setCreatedBy(metehanUser.get());
-                } else {
-                    Optional<User> seyithanUser = userRepository.findByUsername("seyithan");
-                    seyithanUser.ifPresent(modelVersion::setCreatedBy);
-                }
-            }
-            
+            // createdBy alanı nullable; veritabanında eski şema (auth_users) ile uyumsuzluk olabileceği için atanmıyor
             modelVersionRepository.save(modelVersion);
             log.info("✅ Model version added to database");
         } else {
@@ -349,6 +338,24 @@ public class DataInitializer implements CommandLineRunner {
         }
         
         log.info("Model version initialization completed - Total model versions in DB: {}", modelVersionRepository.count());
+    }
+
+    /** Mevcut haberlerde normalized_title null ise doldurur; böylece duplicate kontrolü eski kayıtları da kapsar. */
+    private void backfillNormalizedTitle() {
+        List<News> withoutNormalized = newsRepository.findByNormalizedTitleIsNull();
+        if (withoutNormalized.isEmpty()) {
+            return;
+        }
+        log.info("Backfilling normalized_title for {} existing news...", withoutNormalized.size());
+        int updated = 0;
+        for (News news : withoutNormalized) {
+            if (news.getTitle() != null && !news.getTitle().isEmpty()) {
+                news.setNormalizedTitle(NewsTitleNormalizer.normalize(news.getTitle()));
+                newsRepository.save(news);
+                updated++;
+            }
+        }
+        log.info("Backfill completed: {} news normalized_title set.", updated);
     }
 
     private void initializeSources() {
