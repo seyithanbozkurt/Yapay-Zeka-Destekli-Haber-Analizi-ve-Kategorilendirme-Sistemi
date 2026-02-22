@@ -5,59 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="bd994731-3d1b-4695-9825-9633dbd38be5" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/config/ScheduledTasks.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/config/ScheduledTasks.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/CategoryController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/CategoryController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/CrawlingLogController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/CrawlingLogController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/ModelVersionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/ModelVersionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/NewsClassificationResultController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/NewsClassificationResultController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/NewsController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/NewsController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/RoleController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/RoleController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/SourceController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/SourceController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/UserController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/UserFeedBackController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/controller/UserFeedBackController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/auth/AuthResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/auth/AuthResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/auth/LoginRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/auth/LoginRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/category/CategoryCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/category/CategoryCreateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/category/CategoryResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/category/CategoryResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/category/CategoryUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/category/CategoryUpdateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/crawl/CrawlingLogResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/crawl/CrawlingLogResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/feed/UserFeedBackCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/feed/UserFeedBackCreateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/feed/UserFeedBackResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/feed/UserFeedBackResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/feed/UserFeedBackUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/feed/UserFeedBackUpdateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/model/ModelVersionCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/model/ModelVersionCreateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/model/ModelVersionResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/model/ModelVersionResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/model/ModelVersionUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/model/ModelVersionUpdateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsClassificationResultCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsClassificationResultCreateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsClassificationResultResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsClassificationResultResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsClassificationResultUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsClassificationResultUpdateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsCreateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/news/NewsUpdateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/source/SourceCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/source/SourceCreateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/source/SourceResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/source/SourceResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/source/SourceUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/source/SourceUpdateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/RoleCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/RoleCreateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/RoleResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/RoleResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/RoleUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/RoleUpdateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/UserCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/UserCreateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/UserResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/UserResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/UserUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/dto/user/UserUpdateRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/exception/GlobalExceptionHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/CategoryServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/CategoryServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/CustomUserDetailsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/CustomUserDetailsService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/DynamicNewsCrawlerService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/DynamicNewsCrawlerService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/ModelVersionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/ModelVersionServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/NewsClassificationResultServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/NewsClassificationResultServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/NewsServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/NewsServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/RoleServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/RoleServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/SourceServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/SourceServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/UserFeedBackServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/UserFeedBackServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/UserServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/config/DataInitializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/config/DataInitializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/entity/ModelVersion.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/entity/ModelVersion.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/db/migration/V1__Initial_schema.sql" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -119,7 +72,7 @@
     &quot;Spring Boot.BitirmeProjesiApplication (1).executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.BitirmeProjesiApplication.executor&quot;: &quot;Run&quot;,
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;duplicate-kontrolü&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;/Users/metehansargin/Yapay-Zeka-Destekli-Haber-Analizi-ve-Kategorilendirme-Sistemi&quot;,
@@ -212,6 +165,8 @@
       <workItem from="1766492349641" duration="874000" />
       <workItem from="1768820316712" duration="8732000" />
       <workItem from="1769003047018" duration="436000" />
+      <workItem from="1770323806542" duration="4482000" />
+      <workItem from="1771346556138" duration="995000" />
     </task>
     <servers />
   </component>

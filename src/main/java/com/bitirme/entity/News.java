@@ -30,6 +30,10 @@ public class News {
     @Column(nullable = false)
     private String title;
 
+    /** Duplicate kontrolü için normalize edilmiş başlık (kaynak + başlık tekil olacak). */
+    @Column(name = "normalized_title", length = 500)
+    private String normalizedTitle;
+
     @Column(columnDefinition = "TEXT")
     private String content;
 

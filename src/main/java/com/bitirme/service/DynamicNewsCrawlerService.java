@@ -7,6 +7,7 @@ import com.bitirme.entity.Source;
 import com.bitirme.repository.CrawlingLogRepository;
 import com.bitirme.repository.NewsRepository;
 import com.bitirme.repository.SourceRepository;
+import com.bitirme.util.NewsTitleNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -289,13 +290,13 @@ public class DynamicNewsCrawlerService {
             log.info("Source {}: Processed {} links, extracted {} valid news items (title length > 5)", 
                     source.getName(), processedCount, newsList.size());
             
-            // Veritabanına kaydet - duplicate kontrolü ile
+            // Veritabanına kaydet - duplicate kontrolü ile (aynı haber asla iki kez eklenmez)
             int duplicateCount = 0;
             int externalIdDuplicateCount = 0;
             int titleDuplicateCount = 0;
             for (NewsCreateRequest newsRequest : newsList) {
                 try {
-                    // Önce external_id kontrolü (aynı kaynaktan aynı URL)
+                    // 1) Aynı kaynaktan aynı URL (external_id) zaten varsa ekleme
                     if (newsRequest.getExternalId() != null) {
                         Optional<News> existing = newsRepository
                                 .findByExternalIdAndSourceId(newsRequest.getExternalId(), source.getId());
@@ -307,15 +308,26 @@ public class DynamicNewsCrawlerService {
                             continue;
                         }
                     }
-                    
-                    // Title bazlı duplicate kontrolü (farklı kaynaklardan aynı haber)
-                    String normalizedTitle = normalizeTitle(newsRequest.getTitle());
-                    if (!normalizedTitle.isEmpty() && normalizedTitle.length() > 10) { // En az 10 karakter olmalı
+
+                    // 2) Aynı kaynaktan aynı başlık (normalize) zaten varsa ekleme - Takvim vb. aynı haber farklı URL tekrarını engeller
+                    String normalizedTitle = NewsTitleNormalizer.normalize(newsRequest.getTitle());
+                    if (!normalizedTitle.isEmpty() && normalizedTitle.length() >= 5) {
+                        if (newsRepository.existsBySourceIdAndNormalizedTitle(source.getId(), normalizedTitle)) {
+                            duplicateCount++;
+                            titleDuplicateCount++;
+                            log.debug("Source {}: Duplicate news skipped (same title already in DB for this source): {}", 
+                                    source.getName(), newsRequest.getTitle());
+                            continue;
+                        }
+                    }
+
+                    // 3) Tüm kaynaklarda aynı normalize başlık varsa ekleme (veritabanında tek bir örnek yeterli)
+                    if (!normalizedTitle.isEmpty() && normalizedTitle.length() >= 10) {
                         List<News> similarNews = newsRepository.findByNormalizedTitle(normalizedTitle);
                         if (!similarNews.isEmpty()) {
                             duplicateCount++;
                             titleDuplicateCount++;
-                            log.debug("Source {}: Duplicate news found (similar title already exists): {} (normalized: {})", 
+                            log.debug("Source {}: Duplicate news skipped (same title exists globally): {} (normalized: {})", 
                                     source.getName(), newsRequest.getTitle(), normalizedTitle);
                             continue;
                         }
@@ -330,7 +342,7 @@ public class DynamicNewsCrawlerService {
             }
             
             if (duplicateCount > 0) {
-                log.info("Source {}: {} duplicate news skipped - External ID duplicates: {}, Title duplicates: {}", 
+                log.info("Source {}: {} duplicate news skipped - External ID: {}, Same title: {}", 
                         source.getName(), duplicateCount, externalIdDuplicateCount, titleDuplicateCount);
             }
             
@@ -491,27 +503,5 @@ public class DynamicNewsCrawlerService {
         return USER_AGENTS.get(random.nextInt(USER_AGENTS.size()));
     }
     
-    /**
-     * Title'ı normalize eder - duplicate kontrolü için kullanılır.
-     * Küçük harfe çevirir, özel karakterleri ve fazla boşlukları temizler.
-     * Türkçe karakterler korunur (ı, ğ, ü, ş, ö, ç).
-     */
-    private String normalizeTitle(String title) {
-        if (title == null || title.isEmpty()) {
-            return "";
-        }
-        
-        // Küçük harfe çevir (Türkçe karakterler dahil)
-        String normalized = title.toLowerCase();
-        
-        // Özel karakterleri kaldır (sadece harf, rakam, Türkçe karakterler ve boşluk bırak)
-        // Türkçe karakterler: çğıöşüÇĞIİÖŞÜ
-        normalized = normalized.replaceAll("[^a-zçğıöşü0-9\\s]", "");
-        
-        // Fazla boşlukları tek boşluğa indirge
-        normalized = normalized.replaceAll("\\s+", " ").trim();
-        
-        return normalized;
-    }
 }
 
