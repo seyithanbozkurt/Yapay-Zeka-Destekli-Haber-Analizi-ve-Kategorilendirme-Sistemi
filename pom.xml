@@ -15,6 +15,9 @@
 	<description>Demo Final Project for Spring Boot</description>
 	<properties>
 		<java.version>21</java.version>
+		<scala.binary.version>2.12</scala.binary.version>
+		<spark.version>3.5.0</spark.version>
+		<lucene.version>9.11.0</lucene.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -80,7 +83,42 @@
             <version>0.12.3</version>
             <scope>runtime</scope>
         </dependency>
-    </dependencies>
+
+		<!-- Apache Spark (NLP/ML - local mode) -->
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-core_${scala.binary.version}</artifactId>
+			<version>${spark.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-log4j12</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-sql_${scala.binary.version}</artifactId>
+			<version>${spark.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.spark</groupId>
+			<artifactId>spark-mllib_${scala.binary.version}</artifactId>
+			<version>${spark.version}</version>
+		</dependency>
+
+		<!-- Apache Lucene (TF-IDF, metin analizi) -->
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-core</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-analysis-common</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+	</dependencies>
 
 	<build>
 		<plugins>

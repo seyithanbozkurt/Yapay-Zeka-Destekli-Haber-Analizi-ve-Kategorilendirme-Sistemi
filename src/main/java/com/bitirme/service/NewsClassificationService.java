@@ -2,6 +2,9 @@ package com.bitirme.service;
 
 import com.bitirme.dto.news.NewsClassificationResultCreateRequest;
 import com.bitirme.entity.*;
+import com.bitirme.nlp.MlClassificationResult;
+import com.bitirme.nlp.SparkNewsClassifier;
+import com.bitirme.nlp.config.MlClassifierProperties;
 import com.bitirme.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +24,8 @@ public class NewsClassificationService {
     private final CategoryRepository categoryRepository;
     private final ModelVersionRepository modelVersionRepository;
     private final NewsClassificationResultService classificationResultService;
+    private final MlClassifierProperties mlClassifierProperties;
+    private final SparkNewsClassifier sparkNewsClassifier;
 
     private static final Map<String, List<String>> CATEGORY_KEYWORDS = new HashMap<>();
 
@@ -155,6 +160,21 @@ public class NewsClassificationService {
     }
 
     private ClassificationResult classifyNews(News news) {
+        // Önce ML modeli dene (Spark + TF-IDF + Naive Bayes)
+        if (mlClassifierProperties.isEnabled() && sparkNewsClassifier.isModelLoaded()) {
+            Optional<MlClassificationResult> mlResult = sparkNewsClassifier.classify(news);
+            if (mlResult.isPresent()) {
+                return new ClassificationResult(
+                        mlResult.get().getCategoryName(),
+                        mlResult.get().getConfidence() != null ? mlResult.get().getConfidence() : BigDecimal.valueOf(0.5)
+                );
+            }
+        }
+        // Fallback: anahtar kelime tabanlı sınıflandırma
+        return classifyNewsWithKeywords(news);
+    }
+
+    private ClassificationResult classifyNewsWithKeywords(News news) {
         String text = (news.getTitle() + " " + (news.getContent() != null ? news.getContent() : ""))
                 .toLowerCase();
 

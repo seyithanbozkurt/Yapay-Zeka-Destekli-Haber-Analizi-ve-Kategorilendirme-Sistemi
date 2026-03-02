@@ -7,10 +7,9 @@
     <list default="true" id="bd994731-3d1b-4695-9825-9633dbd38be5" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/config/DataInitializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/config/DataInitializer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/entity/ModelVersion.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/entity/ModelVersion.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/NewsClassificationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/NewsClassificationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/bitirme/service/NewsServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/bitirme/service/NewsServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/db/migration/V1__Initial_schema.sql" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -166,7 +165,7 @@
       <workItem from="1768820316712" duration="8732000" />
       <workItem from="1769003047018" duration="436000" />
       <workItem from="1770323806542" duration="4482000" />
-      <workItem from="1771346556138" duration="995000" />
+      <workItem from="1771346556138" duration="25328000" />
     </task>
     <servers />
   </component>
