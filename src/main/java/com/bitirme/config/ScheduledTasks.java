@@ -10,6 +10,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,9 @@ public class ScheduledTasks {
     
     @PersistenceContext
     private EntityManager entityManager;
+
+    @Value("${scheduler.delete-refresh.enabled:false}")
+    private boolean deleteRefreshEnabled;
 
     // Her 6 saatte bir haber çek (cron: 0 0 */6 * * ?)
     @Scheduled(cron = "0 0 */6 * * ?")
@@ -74,10 +78,13 @@ public class ScheduledTasks {
         }
     }
 
-    // Her 5 dakikada bir haber kayıtlarını sil ve yeni haberleri çek (cron: 0 */5 * * * ?)
-    @Scheduled(cron = "0 */5 * * * ?")
+    // Her 5 saatte bir haber kayıtlarını sil ve yeni haberleri çek (cron: 0 * */5 *  * ?)
+    @Scheduled(cron = "0 * */5 * *  ?")
     @Transactional
     public void deleteAndRefreshNews() {
+        if (!deleteRefreshEnabled) {
+            return;
+        }
         log.info("═══════════════════════════════════════════════════════════════");
         log.info("Scheduled news deletion and refresh started...");
         try {
