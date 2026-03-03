@@ -6,14 +6,17 @@ import com.bitirme.entity.Role;
 import com.bitirme.entity.Source;
 import com.bitirme.entity.User;
 import com.bitirme.entity.News;
+import com.bitirme.entity.NewsClassificationResult;
 import com.bitirme.repository.CategoryRepository;
 import com.bitirme.repository.ModelVersionRepository;
 import com.bitirme.repository.NewsRepository;
 import com.bitirme.repository.RoleRepository;
 import com.bitirme.repository.SourceRepository;
 import com.bitirme.repository.UserRepository;
+import com.bitirme.repository.NewsClassificationResultRepository;
 import com.bitirme.util.NewsTitleNormalizer;
 import com.bitirme.service.NewsCrawlerService;
+import com.bitirme.service.NewsClassificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -35,7 +38,9 @@ public class DataInitializer implements CommandLineRunner {
     private final ModelVersionRepository modelVersionRepository;
     private final NewsRepository newsRepository;
     private final NewsCrawlerService newsCrawlerService;
+    private final NewsClassificationService newsClassificationService;
     private final PasswordEncoder passwordEncoder;
+    private final NewsClassificationResultRepository newsClassificationResultRepository;
 
     @Override
     public void run(String... args) {
@@ -47,14 +52,28 @@ public class DataInitializer implements CommandLineRunner {
         initializeModelVersion();
         backfillNormalizedTitle();
         log.info("Data initialization completed!");
-        
-        // Uygulama başladığında ilk haber çekme işlemini başlat
+
+        // Uygulama başladığında ilk haber çekme + ilk sınıflandırma işlemlerini başlat
         log.info("Starting initial news crawl...");
         try {
             int fetchedCount = newsCrawlerService.crawlAllSources();
             log.info("Initial news crawl completed. {} news fetched.", fetchedCount);
+
+            // İlk model versiyonunu bul ve işlenmemiş haberleri sınıflandır
+            ModelVersion modelVersion = modelVersionRepository.findAll().stream()
+                    .findFirst()
+                    .orElse(null);
+
+            if (modelVersion != null) {
+                log.info("Starting initial news classification with model version id={} name='{}'.",
+                        modelVersion.getId(), modelVersion.getName());
+                int classifiedCount = newsClassificationService.classifyUnprocessedNews(modelVersion.getId());
+                log.info("Initial news classification completed. {} news classified.", classifiedCount);
+            } else {
+                log.warn("No model version found, initial classification skipped.");
+            }
         } catch (Exception e) {
-            log.error("Error in initial news crawl: {}", e.getMessage());
+            log.error("Error in initial news crawl or classification: {}", e.getMessage());
         }
     }
 
@@ -356,6 +375,30 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
         log.info("Backfill completed: {} news normalized_title set.", updated);
+    }
+
+    /**
+     * Daha önce sınıflandırılmış haberler için news_categories join tablosunu doldurur.
+     * (news_classification_results -> news_categories)
+     */
+    private void backfillNewsCategoriesFromResults() {
+        List<NewsClassificationResult> results = newsClassificationResultRepository.findAll();
+        if (results.isEmpty()) {
+            return;
+        }
+        int linked = 0;
+        for (NewsClassificationResult r : results) {
+            Long newsId = r.getNews() != null ? r.getNews().getId() : null;
+            News news = (newsId != null) ? newsRepository.findById(newsId).orElse(null) : null;
+            Category category = r.getPredictedCategory();
+            if (news == null || category == null) continue;
+            if (!news.getCategories().contains(category)) {
+                news.getCategories().add(category);
+                newsRepository.save(news);
+                linked++;
+            }
+        }
+        log.info("Backfill news_categories completed: {} news-category links created.", linked);
     }
 
     private void initializeSources() {

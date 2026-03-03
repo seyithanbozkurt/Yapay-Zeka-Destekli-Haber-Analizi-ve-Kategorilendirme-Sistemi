@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class NewsClassificationService {
     private final ModelVersionRepository modelVersionRepository;
     private final NewsClassificationResultService classificationResultService;
     private final MlClassifierProperties mlClassifierProperties;
-    private final SparkNewsClassifier sparkNewsClassifier;
+    private final Optional<SparkNewsClassifier> sparkNewsClassifier;
 
     private static final Map<String, List<String>> CATEGORY_KEYWORDS = new HashMap<>();
 
@@ -161,8 +162,10 @@ public class NewsClassificationService {
 
     private ClassificationResult classifyNews(News news) {
         // Önce ML modeli dene (Spark + TF-IDF + Naive Bayes)
-        if (mlClassifierProperties.isEnabled() && sparkNewsClassifier.isModelLoaded()) {
-            Optional<MlClassificationResult> mlResult = sparkNewsClassifier.classify(news);
+        if (mlClassifierProperties.isEnabled()
+                && sparkNewsClassifier.isPresent()
+                && sparkNewsClassifier.get().isModelLoaded()) {
+            Optional<MlClassificationResult> mlResult = sparkNewsClassifier.get().classify(news);
             if (mlResult.isPresent()) {
                 return new ClassificationResult(
                         mlResult.get().getCategoryName(),
@@ -175,8 +178,7 @@ public class NewsClassificationService {
     }
 
     private ClassificationResult classifyNewsWithKeywords(News news) {
-        String text = (news.getTitle() + " " + (news.getContent() != null ? news.getContent() : ""))
-                .toLowerCase();
+        String text = normalizeForKeywordMatch(news.getTitle() + " " + (news.getContent() != null ? news.getContent() : ""));
 
         Map<String, Integer> categoryScores = new HashMap<>();
 
@@ -209,12 +211,23 @@ public class NewsClassificationService {
                 .orElse("Diğer");
 
         int maxScore = categoryScores.get(predictedCategoryName);
-        int totalKeywords = CATEGORY_KEYWORDS.get(predictedCategoryName).size();
-        BigDecimal confidence = BigDecimal.valueOf(maxScore)
-                .divide(BigDecimal.valueOf(totalKeywords), 4, RoundingMode.HALF_UP)
-                .min(BigDecimal.ONE);
+        int totalMatches = categoryScores.values().stream().mapToInt(Integer::intValue).sum();
+
+        // Daha anlamlı ve daha yüksek skor: eşleşme sayısı arttıkça yaklaşan bir fonksiyon (olasılık değil)
+        double matchStrength = maxScore / (maxScore + 2.0); // 1->0.33, 2->0.50, 3->0.60, 5->0.71
+        double dominance = totalMatches > 0 ? ((double) maxScore) / totalMatches : 1.0;
+        double conf = matchStrength * (0.5 + 0.5 * dominance);
+        BigDecimal confidence = BigDecimal.valueOf(conf).setScale(4, RoundingMode.HALF_UP).min(BigDecimal.ONE);
 
         return new ClassificationResult(predictedCategoryName, confidence);
+    }
+
+    private String normalizeForKeywordMatch(String text) {
+        if (text == null) return "";
+        return text.toLowerCase(java.util.Locale.forLanguageTag("tr"))
+                .replaceAll("[^a-zçğıöşü0-9\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private ClassificationResult matchWithDatabaseCategories(String text) {
@@ -259,6 +272,12 @@ public class NewsClassificationService {
         request.setActive(true);
 
         classificationResultService.create(request);
+
+        // Haber ile kategori arasındaki ilişkiyi de many-to-many tabloda tut
+        if (!news.getCategories().contains(category)) {
+            news.getCategories().add(category);
+            newsRepository.save(news);
+        }
     }
 
     private static class ClassificationResult {

@@ -105,6 +105,26 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
         newsClassificationResultRepository.deleteById(id);
     }
 
+    /**
+     * Mevcut sınıflandırma sonuçlarından yola çıkarak news_categories join tablosunu doldurur.
+     */
+    @Transactional
+    public int backfillNewsCategories() {
+        var results = newsClassificationResultRepository.findAll();
+        int linked = 0;
+        for (NewsClassificationResult r : results) {
+            News news = r.getNews();
+            Category category = r.getPredictedCategory();
+            if (news == null || category == null) continue;
+            if (!news.getCategories().contains(category)) {
+                news.getCategories().add(category);
+                newsRepository.save(news);
+                linked++;
+            }
+        }
+        return linked;
+    }
+
     private NewsClassificationResultResponse toResponse(NewsClassificationResult result) {
         NewsClassificationResultResponse response = new NewsClassificationResultResponse();
         response.setId(result.getId());

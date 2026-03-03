@@ -2,18 +2,18 @@ package com.bitirme.nlp.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SparkSession;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import jakarta.annotation.PreDestroy;
-import java.util.Optional;
 
 /**
  * SparkSession bean (local mode). ML pipeline bu session ile çalışır.
  */
 @Configuration
+@ConditionalOnProperty(prefix = "ml.classifier", name = "enabled", havingValue = "true")
 @Slf4j
 public class SparkConfig {
 

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +36,15 @@ public class DynamicNewsCrawlerService {
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0"
     );
+
+    private static final Set<String> GENERIC_TITLES = Set.of(
+            "gündem", "gundem", "galeri", "video", "son dakika", "sondakika",
+            "en çok okunanlar", "son dakika haberleri", "türkiye", "turkiye",
+            "tüm haberler", "tum haberler", "politika", "3.sayfa", "3 sayfa",
+            "güncel", "guncel", "ekonomi", "dünya", "dunya", "sağlık", "saglik",
+            "eğitim", "egitim", "teknoloji", "spor", "magazin", "kültür-sanat", "kultur-sanat"
+    );
+    private static final Pattern ONLY_PUNCT_OR_DIGITS = Pattern.compile("^[\\p{Punct}\\d\\s]+$");
 
     @Transactional
     public int crawlAllSources() {
@@ -271,9 +281,14 @@ public class DynamicNewsCrawlerService {
                     }
 
                     if (title != null && title.length() > 5 && title.length() < 300) {
+                        // Düşük kaliteli kayıtları (TRT Haber'de görülen "Gündem/GALERİ" vb.) hiç ekleme
+                        String safeContent = (content != null && !content.isEmpty()) ? content : title;
+                        if (isLowQuality(title, safeContent)) {
+                            continue;
+                        }
                         NewsCreateRequest news = new NewsCreateRequest();
                         news.setTitle(title);
-                        news.setContent(content != null && !content.isEmpty() ? content : title);
+                        news.setContent(safeContent);
                         news.setOriginalUrl(link);
                         news.setExternalId(link);
                         news.setLanguage("tr");
@@ -376,6 +391,32 @@ public class DynamicNewsCrawlerService {
 
             return 0;
         }
+    }
+
+    private boolean isLowQuality(String title, String content) {
+        if (title == null || title.isBlank()) return true;
+        String t = normalizeSimple(title);
+        String c = normalizeSimple(content != null ? content : "");
+
+        if (t.length() < 8) return true;
+        if (ONLY_PUNCT_OR_DIGITS.matcher(t).matches()) return true;
+        if (GENERIC_TITLES.contains(t)) return true;
+
+        // Title ve content aynıysa (ör. "Gündem" / "Gündem") kayıt etmeyelim
+        if (!c.isEmpty() && t.equals(c)) return true;
+
+        // Content çok kısa ise (title'dan farklı olsa bile) kayıt etmeyelim
+        if (c.length() < 20) return true;
+
+        return false;
+    }
+
+    private String normalizeSimple(String s) {
+        if (s == null) return "";
+        return s.toLowerCase(Locale.forLanguageTag("tr"))
+                .replaceAll("[^a-zçğıöşü0-9\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private String extractLink(Element element, Source source) {

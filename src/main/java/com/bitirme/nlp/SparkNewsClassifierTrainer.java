@@ -9,10 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
+import org.apache.spark.ml.classification.NaiveBayes;
 import org.apache.spark.ml.feature.HashingTF;
 import org.apache.spark.ml.feature.IDF;
 import org.apache.spark.ml.feature.Tokenizer;
-import org.apache.spark.ml.classification.NaiveBayes;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -21,18 +21,19 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Veritabanındaki etiketli haberlerle Spark ML pipeline (TF-IDF + Naive Bayes) eğitir ve kaydeder.
  */
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "ml.classifier", name = "enabled", havingValue = "true")
 @Slf4j
 public class SparkNewsClassifierTrainer {
 
