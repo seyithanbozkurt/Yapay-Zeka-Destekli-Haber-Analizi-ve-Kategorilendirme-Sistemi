@@ -3,6 +3,7 @@ package com.bitirme.service;
 import com.bitirme.dto.news.NewsClassificationResultCreateRequest;
 import com.bitirme.entity.*;
 import com.bitirme.nlp.MlClassificationResult;
+import com.bitirme.nlp.NaiveBayesNewsClassifier;
 import com.bitirme.nlp.SparkNewsClassifier;
 import com.bitirme.nlp.config.MlClassifierProperties;
 import com.bitirme.repository.*;
@@ -27,6 +28,7 @@ public class NewsClassificationService {
     private final NewsClassificationResultService classificationResultService;
     private final MlClassifierProperties mlClassifierProperties;
     private final Optional<SparkNewsClassifier> sparkNewsClassifier;
+    private final Optional<NaiveBayesNewsClassifier> naiveBayesNewsClassifier;
 
     private static final Map<String, List<String>> CATEGORY_KEYWORDS = new HashMap<>();
 
@@ -161,19 +163,34 @@ public class NewsClassificationService {
     }
 
     private ClassificationResult classifyNews(News news) {
-        // Önce ML modeli dene (Spark + TF-IDF + Naive Bayes)
+        // 1) Tercih: Spark + TF-IDF + Lineer SVM modeli (varsa)
         if (mlClassifierProperties.isEnabled()
                 && sparkNewsClassifier.isPresent()
                 && sparkNewsClassifier.get().isModelLoaded()) {
             Optional<MlClassificationResult> mlResult = sparkNewsClassifier.get().classify(news);
             if (mlResult.isPresent()) {
+                MlClassificationResult r = mlResult.get();
                 return new ClassificationResult(
-                        mlResult.get().getCategoryName(),
-                        mlResult.get().getConfidence() != null ? mlResult.get().getConfidence() : BigDecimal.valueOf(0.5)
+                        r.getCategoryName(),
+                        r.getConfidence() != null ? r.getConfidence() : BigDecimal.valueOf(0.6)
                 );
             }
         }
-        // Fallback: anahtar kelime tabanlı sınıflandırma
+
+        // 2) İkinci tercih: Java içi Naive Bayes modeli (varsa)
+        if (naiveBayesNewsClassifier.isPresent()
+                && naiveBayesNewsClassifier.get().isModelReady()) {
+            Optional<MlClassificationResult> mlResult = naiveBayesNewsClassifier.get().classify(news);
+            if (mlResult.isPresent()) {
+                MlClassificationResult r = mlResult.get();
+                return new ClassificationResult(
+                        r.getCategoryName(),
+                        r.getConfidence() != null ? r.getConfidence() : BigDecimal.valueOf(0.5)
+                );
+            }
+        }
+
+        // 3) Fallback: anahtar kelime tabanlı sınıflandırma
         return classifyNewsWithKeywords(news);
     }
 

@@ -9,7 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
-import org.apache.spark.ml.classification.NaiveBayes;
+import org.apache.spark.ml.classification.LinearSVC;
+import org.apache.spark.ml.classification.OneVsRest;
 import org.apache.spark.ml.feature.HashingTF;
 import org.apache.spark.ml.feature.IDF;
 import org.apache.spark.ml.feature.Tokenizer;
@@ -94,16 +95,34 @@ public class SparkNewsClassifierTrainer {
         });
         Dataset<Row> df = sparkSession.createDataFrame(rows, schema);
 
-        Tokenizer tokenizer = new Tokenizer().setInputCol("text").setOutputCol("words");
-        HashingTF hashingTF = new HashingTF().setInputCol("words").setOutputCol("rawFeatures").setNumFeatures(1 << 18);
-        IDF idf = new IDF().setInputCol("rawFeatures").setOutputCol("features");
-        NaiveBayes nb = new NaiveBayes()
+        Tokenizer tokenizer = new Tokenizer()
+                .setInputCol("text")
+                .setOutputCol("words");
+
+        HashingTF hashingTF = new HashingTF()
+                .setInputCol("words")
+                .setOutputCol("rawFeatures")
+                .setNumFeatures(1 << 18);
+
+        IDF idf = new IDF()
+                .setInputCol("rawFeatures")
+                .setOutputCol("features");
+
+        // Lineer SVM tabanlı çok sınıflı sınıflandırıcı (One-vs-Rest)
+        LinearSVC linearSVC = new LinearSVC()
                 .setFeaturesCol("features")
                 .setLabelCol("label")
                 .setPredictionCol("prediction")
-                .setProbabilityCol("probability");
+                .setMaxIter(100)
+                .setRegParam(0.1);
 
-        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{tokenizer, hashingTF, idf, nb});
+        OneVsRest ovr = new OneVsRest()
+                .setClassifier(linearSVC)
+                .setLabelCol("label")
+                .setFeaturesCol("features")
+                .setPredictionCol("prediction");
+
+        Pipeline pipeline = new Pipeline().setStages(new PipelineStage[]{tokenizer, hashingTF, idf, ovr});
         PipelineModel model = pipeline.fit(df);
 
         Path dir = Path.of(properties.getModelPath());
