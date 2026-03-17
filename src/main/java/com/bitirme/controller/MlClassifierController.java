@@ -1,6 +1,7 @@
 package com.bitirme.controller;
 
 import com.bitirme.dto.common.ApiResponse;
+import com.bitirme.nlp.MlEvaluationMetrics;
 import com.bitirme.nlp.NaiveBayesNewsClassifier;
 import com.bitirme.nlp.SparkNewsClassifier;
 import com.bitirme.nlp.SparkNewsClassifierTrainer;
@@ -35,11 +36,21 @@ public class MlClassifierController {
         Map<String, Object> data = new HashMap<>();
         String message;
 
-        // 1) Tercih: Spark Lineer SVM eğitimi
+        // 1) Tercih: Spark Lineer SVM eğitimi (N-gram + TF-IDF + Linear SVM)
         if (mlProperties.isEnabled() && sparkTrainer.isPresent()) {
             int samples = sparkTrainer.get().trainAndSave();
             data.put("sparkEnabled", true);
             data.put("sparkTrainedSamples", samples);
+            MlEvaluationMetrics eval = sparkTrainer.get().getLastEvaluationMetrics();
+            if (eval != null) {
+                Map<String, Object> evaluation = new HashMap<>();
+                evaluation.put("accuracy", eval.getAccuracy());
+                evaluation.put("weightedPrecision", eval.getWeightedPrecision());
+                evaluation.put("weightedRecall", eval.getWeightedRecall());
+                evaluation.put("weightedF1", eval.getWeightedF1());
+                evaluation.put("testSampleCount", eval.getTestSampleCount());
+                data.put("evaluation", evaluation);
+            }
             message = samples > 0
                     ? "Spark Lineer SVM modeli eğitildi."
                     : "Spark Lineer SVM modeli için yeterli veri bulunamadı.";
@@ -99,5 +110,29 @@ public class MlClassifierController {
         data.put("naiveBayesReady", nbReady);
 
         return ResponseEntity.ok(ApiResponse.success(null, data));
+    }
+
+    @GetMapping("/evaluate")
+    @Operation(
+            summary = "Son değerlendirme metrikleri",
+            description = "Son eğitimde (train/test split ile) hesaplanan Accuracy, Precision, Recall, F1 değerlerini döner."
+    )
+    public ResponseEntity<ApiResponse<Map<String, Object>>> evaluate() {
+        Map<String, Object> data = new HashMap<>();
+        if (sparkTrainer.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.error("Spark ML devre dışı. Değerlendirme sadece Spark eğitimi sonrası kullanılabilir."));
+        }
+        MlEvaluationMetrics eval = sparkTrainer.get().getLastEvaluationMetrics();
+        if (eval == null) {
+            data.put("message", "Henüz değerlendirme yapılmadı. POST /api/ml/train ile eğitim yapın (ml.classifier.run-evaluation-after-train=true).");
+            return ResponseEntity.ok(ApiResponse.success(null, data));
+        }
+        data.put("accuracy", eval.getAccuracy());
+        data.put("weightedPrecision", eval.getWeightedPrecision());
+        data.put("weightedRecall", eval.getWeightedRecall());
+        data.put("weightedF1", eval.getWeightedF1());
+        data.put("macroF1", eval.getMacroF1());
+        data.put("testSampleCount", eval.getTestSampleCount());
+        return ResponseEntity.ok(ApiResponse.success("Son eğitim değerlendirme metrikleri.", data));
     }
 }

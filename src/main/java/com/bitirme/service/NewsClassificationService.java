@@ -34,9 +34,10 @@ public class NewsClassificationService {
 
     static {
         CATEGORY_KEYWORDS.put("Asayiş", Arrays.asList(
-                "cinayet", "ölüm", "kaza", "tutuklama", "ceza", "mahkeme", "dava", "şüpheli", "suç",
+                "cinayet", "ölüm", "kaza", "tutuklama", "ceza", "cezası", "mahkeme", "dava", "şüpheli", "suç",
                 "operasyon", "gözaltı", "şebeke", "organize suç", "yolsuzluk", "hırsızlık", "dolandırıcılık",
-                "öldür", "boğul", "feci olay", "korkunç olay", "katled", "bıçakla", "silah", "terör",
+                "öldür", "öldürme", "öldürdü", "boğul", "feci olay", "korkunç olay", "katled", "katil",
+                "bıçak", "bıçakla", "bıçak darbesi", "darbe", "silah", "terör", "hüküm", "infaz", "cezaevi",
                 "bomba", "patlama", "kaçakçılık", "uyuşturucu", "fetö", "pdy", "terör örgütü",
                 "adliye", "savcı", "hakim", "mahkum", "hapis", "tutuklu", "sanık", "duruşma", "adli kontrol"
         ));
@@ -72,9 +73,9 @@ public class NewsClassificationService {
                 "itfaiye", "afad", "kurtarma ekibi"
         ));
         CATEGORY_KEYWORDS.put("Ulaşım", Arrays.asList(
-                "trafik", "metro", "otobüs", "tren", "havayolu", "karayolu", "denizyolu", "ulaşım",
-                "seyahat", "yol", "kaza", "araba", "şoför", "sürücü", "yolcu", "toplu taşıma",
-                "trafik yoğunluğu", "trafik kazası", "trafik polisi"
+                "trafik kazası", "trafik yoğunluğu", "trafik polisi", "trafik", "metro", "otobüs", "tren",
+                "havayolu", "karayolu", "denizyolu", "ulaşım", "toplu taşıma", "araba", "şoför", "sürücü",
+                "yolcu", "tramvay", "metrobüs", "alt geçit", "üst geçit", "köprü", "otoyol"
         ));
         CATEGORY_KEYWORDS.put("Çevre", Arrays.asList(
                 "çevre", "doğa", "iklim", "hava", "su", "toprak", "kirlilik", "geri dönüşüm", "atık",
@@ -114,6 +115,14 @@ public class NewsClassificationService {
                 "dünya", "uluslararası", "abd", "amerika", "avrupa", "asya", "afrika", "çin", "rusya",
                 "almanya", "fransa", "ingiltere", "brexit", "nato", "bm", "birleşmiş milletler",
                 "diplomasi", "dış politika", "büyükelçi", "konsolosluk"
+        ));
+        
+        CATEGORY_KEYWORDS.put("Savaş", Arrays.asList(
+                "savaş", "çatışma", "silahlı çatışma", "cephe", "işgal", "bombardıman", "asker", "ordu",
+                "ordular", "savunma", "saldırı", "taarruz", "ateş", "ateşkes", "muharebe", "operasyon",
+                "ukrayna", "rusya ukrayna", "donbass", "kırım", "nato", "askeri", "askeri operasyon",
+                "tank", "füze", "drone", "silah", "silahlanma", "mülteci", "sığınmacı", "savaş uçak",
+                "deniz kuvvetleri", "kara kuvvetleri", "hava kuvvetleri", "genelkurmay", "şehit", "gazi"
         ));
         
         CATEGORY_KEYWORDS.put("Sosyal", Arrays.asList(
@@ -194,36 +203,53 @@ public class NewsClassificationService {
         return classifyNewsWithKeywords(news);
     }
 
+    /**
+     * Sadece anahtar kelime tabanlı sınıflandırma sonucunu döndürür (test ve doğrulama için).
+     * Başlık ağırlığı ve tüm kategori kelimeleri uygulanır.
+     */
+    public String predictCategoryKeywordOnly(String title, String content) {
+        News news = new News();
+        news.setTitle(title);
+        news.setContent(content != null ? content : "");
+        ClassificationResult r = classifyNewsWithKeywords(news);
+        return r != null ? r.categoryName : null;
+    }
+
+    /** Başlık skoru bu çarpanla çarpılır; böylece başlık, uzun içeriğe göre baskındır. */
+    private static final int TITLE_WEIGHT_MULTIPLIER = 3;
+
     private ClassificationResult classifyNewsWithKeywords(News news) {
-        String text = normalizeForKeywordMatch(news.getTitle() + " " + (news.getContent() != null ? news.getContent() : ""));
+        String titleNorm = normalizeForKeywordMatch(news.getTitle() != null ? news.getTitle() : "");
+        String contentNorm = normalizeForKeywordMatch(news.getContent() != null ? news.getContent() : "");
 
         Map<String, Integer> categoryScores = new HashMap<>();
 
-        // Calculate scores for each category
         for (Map.Entry<String, List<String>> entry : CATEGORY_KEYWORDS.entrySet()) {
             String category = entry.getKey();
             List<String> keywords = entry.getValue();
-            int score = 0;
+            int titleScore = 0;
+            int contentScore = 0;
 
             for (String keyword : keywords) {
-                if (text.contains(keyword)) {
-                    score++;
-                }
+                if (!titleNorm.isEmpty() && titleNorm.contains(keyword)) titleScore++;
+                if (!contentNorm.isEmpty() && contentNorm.contains(keyword)) contentScore++;
             }
 
+            int score = titleScore * TITLE_WEIGHT_MULTIPLIER + contentScore;
             if (score > 0) {
                 categoryScores.put(category, score);
             }
         }
 
-        // Find the category with the highest score
+        // Find the category with the highest score (eşitlikte alfabetik sıra ile kararlı seçim)
         if (categoryScores.isEmpty()) {
-            // Try to match with existing categories in database
-            return matchWithDatabaseCategories(text);
+            String fullText = (titleNorm + " " + contentNorm).trim();
+            return matchWithDatabaseCategories(fullText);
         }
 
         String predictedCategoryName = categoryScores.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
+                .max(Comparator.<Map.Entry<String, Integer>>comparingInt(Map.Entry::getValue)
+                        .thenComparing(Map.Entry::getKey))
                 .map(Map.Entry::getKey)
                 .orElse("Diğer");
 
