@@ -13,7 +13,7 @@ function Login() {
   const [loading, setLoading] = useState(false)
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/home" replace />
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -24,7 +24,7 @@ function Login() {
     try {
       const { token, username: user } = await loginApi(username, password)
       login(token, user)
-      navigate('/dashboard', { replace: true })
+      navigate('/home', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Giriş yapılamadı. Lütfen tekrar deneyin.')
     } finally {
