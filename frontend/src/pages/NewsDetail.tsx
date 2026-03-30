@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../services/api'
 import type { ApiResponse } from '../types/auth'
 import type { News } from '../types/news'
 import type { NewsClassificationResult } from '../types/newsClassification'
 import { fetchClassificationByNewsId } from '../services/newsClassificationService'
+import { createFeedback } from '../services/feedbackService'
+import type { FeedbackType } from '../types/feedback'
+
+interface CategoryItem {
+  id: number
+  name: string
+}
 
 function NewsDetail() {
   const { id } = useParams<{ id: string }>()
@@ -13,6 +21,13 @@ function NewsDetail() {
   const [error, setError] = useState('')
   const [classification, setClassification] = useState<NewsClassificationResult | null>(null)
   const [classificationError, setClassificationError] = useState('')
+  const [categories, setCategories] = useState<CategoryItem[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>('POSITIVE')
+  const [comment, setComment] = useState('')
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState('')
+  const [feedbackError, setFeedbackError] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -22,9 +37,13 @@ function NewsDetail() {
       try {
         setLoading(true)
         setError('')
-        const { data } = await api.get<ApiResponse<News>>(`/news/${id}`)
+        const [{ data: newsData }, { data: categoryData }] = await Promise.all([
+          api.get<ApiResponse<News>>(`/news/${id}`),
+          api.get<CategoryItem[]>('/categories'),
+        ])
         if (!isMounted) return
-        setNews(data.data ?? null)
+        setNews(newsData.data ?? null)
+        setCategories(Array.isArray(categoryData) ? categoryData : [])
         // Haber başarılı geldiyse sınıflandırma sonucunu da yükle
         try {
           const cls = await fetchClassificationByNewsId(id)
@@ -54,6 +73,36 @@ function NewsDetail() {
       isMounted = false
     }
   }, [id])
+
+  const handleFeedbackSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!id) return
+
+    if (!selectedCategoryId) {
+      setFeedbackError('Lütfen doğru olduğunu düşündüğünüz kategoriyi seçin.')
+      return
+    }
+
+    try {
+      setFeedbackLoading(true)
+      setFeedbackError('')
+      setFeedbackMessage('')
+
+      await createFeedback({
+        newsId: Number(id),
+        userSelectedCategoryId: Number(selectedCategoryId),
+        feedbackType,
+        comment: comment.trim() ? comment.trim() : undefined,
+      })
+
+      setFeedbackMessage('Geri bildiriminiz başarıyla kaydedildi.')
+      setComment('')
+    } catch (e) {
+      setFeedbackError('Geri bildirim gönderilemedi. Lütfen tekrar deneyin.')
+    } finally {
+      setFeedbackLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -158,6 +207,92 @@ function NewsDetail() {
                 </p>
               </div>
             )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="text-sm font-semibold text-gray-900">Geri Bildirim</h3>
+            <p className="mt-1 text-sm text-gray-600">
+              AI sonucunu doğru/yanlış olarak işaretleyin ve isterseniz yorum ekleyin.
+            </p>
+
+            <form className="mt-4 space-y-4" onSubmit={handleFeedbackSubmit}>
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Geri Bildirim Tipi</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackType('POSITIVE')}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium border ${
+                      feedbackType === 'POSITIVE'
+                        ? 'bg-green-50 text-green-700 border-green-300'
+                        : 'bg-white text-gray-700 border-gray-300'
+                    }`}
+                  >
+                    Positive
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackType('NEGATIVE')}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium border ${
+                      feedbackType === 'NEGATIVE'
+                        ? 'bg-red-50 text-red-700 border-red-300'
+                        : 'bg-white text-gray-700 border-gray-300'
+                    }`}
+                  >
+                    Negative
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                  Doğru Kategori
+                </label>
+                <select
+                  id="category"
+                  value={selectedCategoryId}
+                  onChange={(e) => setSelectedCategoryId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  required
+                >
+                  <option value="">Kategori seçin</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
+                  Yorum (opsiyonel)
+                </label>
+                <textarea
+                  id="comment"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="Kısa bir açıklama yazabilirsiniz..."
+                />
+              </div>
+
+              {feedbackError && (
+                <p className="text-sm text-red-700 bg-red-50 px-3 py-2 rounded-lg">{feedbackError}</p>
+              )}
+              {feedbackMessage && (
+                <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">{feedbackMessage}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={feedbackLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
+              >
+                {feedbackLoading ? 'Gönderiliyor...' : 'Geri Bildirim Gönder'}
+              </button>
+            </form>
           </div>
         </div>
       )}
