@@ -31,7 +31,7 @@ public class MlClassifierProperties {
     private int minTrainingSamples = 50;
 
     // --- Özellik çıkarımı (n-gram) ---
-    
+
     // N-gram minimum n (1 = unigram dahil).
     private int nGramMin = 1;
     // N-gram maximum n (2 = bigram, 3 = trigram).
