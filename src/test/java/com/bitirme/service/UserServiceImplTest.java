@@ -2,7 +2,6 @@ package com.bitirme.service;
 
 import com.bitirme.dto.user.UserCreateRequest;
 import com.bitirme.dto.user.UserResponse;
-import com.bitirme.dto.user.UserUpdateRequest;
 import com.bitirme.entity.Role;
 import com.bitirme.entity.User;
 import com.bitirme.exception.AlreadyExistsException;

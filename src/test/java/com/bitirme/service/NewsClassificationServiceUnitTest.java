@@ -72,8 +72,6 @@ class NewsClassificationServiceUnitTest {
     @Test
     @DisplayName("beyaz kutu: Turizm kritik başlık sinyalleri fallback'e gitmeden Turizm döner")
     void predictTurizmTest() {
-        // White-box beklenti: başlıkta en az 2 Turizm kritik sinyali (otel, rezervasyon)
-        // bulunduğunda classifyWithCriticalRules devreye girer ve DB fallback çağrılmaz.
         String cat = newsClassificationService.predictCategoryKeywordOnly(
                 "Otel rezervasyon sayıları arttı",
                 "Borsa, dolar ve faiz konuşulsa da turizm haberi."
