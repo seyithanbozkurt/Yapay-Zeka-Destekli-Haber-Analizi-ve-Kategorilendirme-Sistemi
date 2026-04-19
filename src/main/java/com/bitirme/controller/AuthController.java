@@ -2,6 +2,7 @@ package com.bitirme.controller;
 
 import com.bitirme.dto.auth.AuthResponse;
 import com.bitirme.dto.auth.LoginRequest;
+import com.bitirme.dto.auth.RegisterRequest;
 import com.bitirme.dto.common.ApiResponse;
 import com.bitirme.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +30,17 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Giriş başarılı", response));
+    }
+
+    @PostMapping("/register")
+    @Operation(summary = "Kayıt ol", description = "E-posta, ad, soyad, doğum tarihi ve şifre ile yeni kullanıcı oluşturur ve JWT token döner.", security = {})
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Kayıt başarılı"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "E-posta zaten kullanılıyor")
+    })
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        AuthResponse response = authService.register(request);
+        return ResponseEntity.ok(ApiResponse.success("Kayıt başarılı", response));
     }
 }
 

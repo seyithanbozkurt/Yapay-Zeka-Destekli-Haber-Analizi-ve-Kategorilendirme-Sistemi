@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -24,6 +25,15 @@ public class User {
 
     @Column(nullable = false, unique = true, length = 100)
     private String email;
+
+    @Column(name = "first_name", length = 100)
+    private String firstName;
+
+    @Column(name = "last_name", length = 100)
+    private String lastName;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;

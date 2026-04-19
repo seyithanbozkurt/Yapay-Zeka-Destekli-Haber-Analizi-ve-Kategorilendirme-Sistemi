@@ -15,8 +15,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -40,13 +40,14 @@ public class DynamicNewsCrawlerService {
     private static final Set<String> GENERIC_TITLES = Set.of(
             "gündem", "gundem", "galeri", "video", "son dakika", "sondakika",
             "en çok okunanlar", "son dakika haberleri", "türkiye", "turkiye",
-            "tüm haberler", "tum haberler", "politika", "3.sayfa", "3 sayfa",
+            "tüm haberler", "tum haberler", "haberler", "kurumsal", "kurumsal bilgiler",
+            "iletişim", "iletisim", "abonelik", "rss",
+            "politika", "3.sayfa", "3 sayfa",
             "güncel", "guncel", "ekonomi", "dünya", "dunya", "sağlık", "saglik",
             "eğitim", "egitim", "teknoloji", "spor", "magazin", "kültür-sanat", "kultur-sanat"
     );
     private static final Pattern ONLY_PUNCT_OR_DIGITS = Pattern.compile("^[\\p{Punct}\\d\\s]+$");
 
-    @Transactional
     public int crawlAllSources() {
         List<Source> activeSources = sourceRepository.findByActiveTrue();
         int totalFetched = 0;
@@ -65,7 +66,6 @@ public class DynamicNewsCrawlerService {
         return totalFetched;
     }
 
-    @Transactional
     public int crawlBreakingNews() {
         List<Source> sourcesWithBreakingNews = sourceRepository.findByActiveTrue().stream()
                 .filter(s -> s.getCrawlType() != null && s.getCrawlType().equals("breaking_news"))
@@ -88,7 +88,6 @@ public class DynamicNewsCrawlerService {
         return totalFetched;
     }
 
-    @Transactional
     public int crawlSource(Source source) {
         String url = source.getCrawlUrl() != null && !source.getCrawlUrl().isEmpty() 
                 ? source.getCrawlUrl() 
@@ -96,7 +95,6 @@ public class DynamicNewsCrawlerService {
         return crawlSourceFromUrl(source, url, false);
     }
 
-    @Transactional
     public int crawlSourceFromUrl(Source source, String url, boolean isBreakingNews) {
         List<NewsCreateRequest> newsList = new ArrayList<>();
 
@@ -232,7 +230,7 @@ public class DynamicNewsCrawlerService {
                         }
                     }
 
-                    // URL filtresi - sadece gerçekten geçersiz linkleri filtrele
+                    // URL filtresi - sadece gerçekten geçersiz veya menü linklerini filtrele
                     String linkLower = link.toLowerCase();
                     
                     // Mutlaka geçilmesi gereken linkler
@@ -243,9 +241,13 @@ public class DynamicNewsCrawlerService {
                         continue;
                     }
                     
-                    // Ana sayfa linklerini geç (sadece base URL ise)
+                    // Ana sayfa linklerini ve kurumsal / menü sayfalarını geç
                     if (linkLower.equals(source.getBaseUrl().toLowerCase()) ||
-                        linkLower.equals(source.getBaseUrl().toLowerCase() + "/")) {
+                        linkLower.equals(source.getBaseUrl().toLowerCase() + "/") ||
+                        linkLower.contains("/kurumsal") ||
+                        linkLower.contains("/haberler") ||
+                        linkLower.contains("/iletisim") ||
+                        linkLower.contains("/rss")) {
                         continue;
                     }
                     
@@ -257,8 +259,9 @@ public class DynamicNewsCrawlerService {
 
                     seenLinks.add(link);
 
-                    String title = extractTitle(element, source);
-                    String content = extractContent(element, source);
+                    ArticleData articleData = fetchArticleData(link, element, source);
+                    String title = articleData.title();
+                    String content = articleData.content();
 
                     // Title extraction başarısız olursa, link'ten veya element text'inden title çıkar
                     if (title == null || title.isEmpty() || title.length() < 5) {
@@ -336,17 +339,7 @@ public class DynamicNewsCrawlerService {
                         }
                     }
 
-                    // 3) Tüm kaynaklarda aynı normalize başlık varsa ekleme (veritabanında tek bir örnek yeterli)
-                    if (!normalizedTitle.isEmpty() && normalizedTitle.length() >= 10) {
-                        List<News> similarNews = newsRepository.findByNormalizedTitle(normalizedTitle);
-                        if (!similarNews.isEmpty()) {
-                            duplicateCount++;
-                            titleDuplicateCount++;
-                            log.debug("Source {}: Duplicate news skipped (same title exists globally): {} (normalized: {})", 
-                                    source.getName(), newsRequest.getTitle(), normalizedTitle);
-                            continue;
-                        }
-                    }
+                    // 3) Global duplicate kontrolünü kaldırdık; farklı kaynaklardan aynı başlık gelebilir
 
                     newsRequest.setSourceId(source.getId());
                     newsService.create(newsRequest);
@@ -539,10 +532,129 @@ public class DynamicNewsCrawlerService {
         return element.text().trim();
     }
 
+    private ArticleData fetchArticleData(String link, Element listElement, Source source) {
+        String fallbackTitle = extractTitle(listElement, source);
+        String fallbackContent = extractContent(listElement, source);
+
+        try {
+            Document articleDoc = Jsoup.connect(link)
+                    .userAgent(getRandomUserAgent())
+                    .timeout(20000)
+                    .followRedirects(true)
+                    .maxBodySize(0)
+                    .get();
+
+            String articleTitle = extractTitleFromArticlePage(articleDoc, source);
+            String articleContent = extractContentFromArticlePage(articleDoc, source);
+
+            if (articleTitle == null || articleTitle.isBlank()) {
+                articleTitle = fallbackTitle;
+            }
+            if (articleContent == null || articleContent.length() < 40) {
+                articleContent = fallbackContent;
+            }
+
+            return new ArticleData(articleTitle, articleContent);
+        } catch (IOException e) {
+            log.debug("Could not fetch article page for {}: {}", link, e.getMessage());
+            return new ArticleData(fallbackTitle, fallbackContent);
+        }
+    }
+
+    private String extractTitleFromArticlePage(Document doc, Source source) {
+        List<String> selectors = new ArrayList<>();
+        if (source.getTitleSelector() != null && !source.getTitleSelector().isBlank()) {
+            selectors.add(source.getTitleSelector());
+        }
+        selectors.addAll(List.of(
+                "meta[property=og:title]",
+                "meta[name=twitter:title]",
+                "article h1",
+                "main h1",
+                "h1",
+                ".article-title",
+                ".news-title",
+                ".headline"
+        ));
+
+        for (String selector : selectors) {
+            try {
+                Element el = doc.selectFirst(selector);
+                if (el == null) continue;
+                String value = selector.startsWith("meta") ? el.attr("content").trim() : el.text().trim();
+                if (value.length() > 5 && value.length() < 300) {
+                    return value;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return doc.title();
+    }
+
+    private String extractContentFromArticlePage(Document doc, Source source) {
+        List<String> selectors = new ArrayList<>();
+        if (source.getContentSelector() != null && !source.getContentSelector().isBlank()) {
+            selectors.add(source.getContentSelector());
+        }
+        selectors.addAll(List.of(
+                "article p",
+                "main article p",
+                ".article-body p",
+                ".news-detail p",
+                ".detail-content p",
+                ".content-detail p",
+                ".haber-metni p",
+                ".post-content p",
+                ".entry-content p",
+                "main p"
+        ));
+
+        for (String selector : selectors) {
+            String joined = joinParagraphs(doc.select(selector));
+            if (joined.length() >= 80) {
+                return joined;
+            }
+        }
+
+        Element metaDescription = doc.selectFirst("meta[name=description], meta[property=og:description]");
+        if (metaDescription != null) {
+            String description = metaDescription.attr("content").trim();
+            if (description.length() >= 40) {
+                return description;
+            }
+        }
+
+        return "";
+    }
+
+    private String joinParagraphs(Elements paragraphs) {
+        if (paragraphs == null || paragraphs.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (Element p : paragraphs) {
+            String text = p.text().trim();
+            if (text.length() < 20) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(text);
+            if (builder.length() >= 4000) {
+                break;
+            }
+        }
+        return builder.toString().replaceAll("\\s+", " ").trim();
+    }
+
     private String getRandomUserAgent() {
         Random random = new Random();
         return USER_AGENTS.get(random.nextInt(USER_AGENTS.size()));
     }
-    
+
+    private record ArticleData(String title, String content) {
+    }
+
 }
 

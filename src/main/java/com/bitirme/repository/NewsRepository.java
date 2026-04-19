@@ -2,8 +2,6 @@ package com.bitirme.repository;
 
 import com.bitirme.entity.News;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -21,8 +19,7 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     List<News> findByProcessedFalse();
     List<News> findByPublishedAtBetween(LocalDateTime start, LocalDateTime end);
     
-    @Query("SELECT n FROM News n WHERE n.source.id = :sourceId AND n.publishedAt >= :fromDate")
-    List<News> findBySourceIdAndPublishedAfter(@Param("sourceId") Integer sourceId, @Param("fromDate") LocalDateTime fromDate);
+    List<News> findBySourceIdAndPublishedAtGreaterThanEqual(Integer sourceId, LocalDateTime fromDate);
     
     /** Normalize edilmiş başlığa göre haberleri bulur (normalized_title kolonu kullanılır). */
     List<News> findByNormalizedTitle(String normalizedTitle);

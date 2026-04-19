@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.util.Set;
 
 @Getter
@@ -18,6 +19,15 @@ public class UserResponse {
     
     @Schema(description = "E-posta adresi", example = "metehan@bitirme.com")
     private String email;
+
+    @Schema(description = "Kullanıcının adı", example = "Metehan")
+    private String firstName;
+
+    @Schema(description = "Kullanıcının soyadı", example = "Sargın")
+    private String lastName;
+
+    @Schema(description = "Doğum tarihi", example = "2000-01-15")
+    private LocalDate birthDate;
     
     @Schema(description = "Aktiflik durumu", example = "true")
     private Boolean active;

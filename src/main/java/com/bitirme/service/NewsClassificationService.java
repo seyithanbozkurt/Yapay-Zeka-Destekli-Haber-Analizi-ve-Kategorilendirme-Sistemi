@@ -31,6 +31,8 @@ public class NewsClassificationService {
     private final Optional<NaiveBayesNewsClassifier> naiveBayesNewsClassifier;
 
     private static final Map<String, List<String>> CATEGORY_KEYWORDS = new HashMap<>();
+    private static final Map<String, List<String>> CRITICAL_TITLE_SIGNALS = new HashMap<>();
+    private static final Map<String, Integer> CRITICAL_TITLE_THRESHOLDS = new HashMap<>();
 
     static {
         CATEGORY_KEYWORDS.put("Asayiş", Arrays.asList(
@@ -129,6 +131,60 @@ public class NewsClassificationService {
                 "sosyal", "toplum", "sosyal medya", "facebook", "twitter", "instagram", "youtube",
                 "influencer", "blogger", "trend", "popüler", "gündem", "hashtag", "viral"
         ));
+
+        CRITICAL_TITLE_SIGNALS.put("Asayiş", Arrays.asList(
+                "cinayet", "öldür", "öldürüldü", "öldürdü", "bıçak", "bıçaklı", "silahlı", "gözaltı",
+                "tutuk", "mahkeme", "ceza", "cezası", "sanık", "şüpheli", "adliye", "hapis",
+                "uyuşturucu", "kaçakçılık", "dolandırıcılık", "hırsızlık", "operasyon", "patlama"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Savaş", Arrays.asList(
+                "savaş", "çatışma", "bombardıman", "ordu", "asker", "füze", "drone", "taarruz",
+                "cephe", "işgal", "hava kuvvetleri", "kara kuvvetleri", "şehit"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Ulaşım", Arrays.asList(
+                "trafik kazası", "metro", "otobüs", "tren", "metrobüs", "tramvay", "otoyol", "köprü"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Sağlık", Arrays.asList(
+                "sağlık bakanlığı", "hastane", "doktor", "ameliyat", "aşı", "virüs", "tedavi", "yoğun bakım"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Spor", Arrays.asList(
+                "süper lig", "şampiyonlar ligi", "galatasaray", "fenerbahçe", "beşiktaş", "trabzonspor",
+                "milli takım", "derbi", "teknik direktör", "transfer"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Ekonomi", Arrays.asList(
+                "merkez bankası", "faiz kararı", "enflasyon", "dolar", "euro", "borsa", "altın", "ihracat"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Doğal Afet", Arrays.asList(
+                "deprem", "sel", "heyelan", "çığ", "fırtına", "afad", "afet bölgesi", "yangın"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Eğitim", Arrays.asList(
+                "meb", "yök", "yks", "lgs", "üniversite sınavı", "öğrenci", "öğretmen ataması", "okullar"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Turizm", Arrays.asList(
+                "turizm sezonu", "otel", "rezervasyon", "turist", "seyahat", "tatil", "kruvaziyer", "turizm geliri"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Çevre", Arrays.asList(
+                "çevre kirliliği", "geri dönüşüm", "iklim krizi", "karbon", "atık", "hava kirliliği", "doğal gaz", "petrol"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Siyaset", Arrays.asList(
+                "cumhurbaşkanı", "meclis", "bakan", "seçim", "parti", "milletvekili", "kabine", "kanun teklifi"
+        ));
+        CRITICAL_TITLE_SIGNALS.put("Dünya", Arrays.asList(
+                "abd", "avrupa birliği", "birleşmiş milletler", "nato zirvesi", "rusya", "çin", "almanya", "fransa"
+        ));
+
+        CRITICAL_TITLE_THRESHOLDS.put("Asayiş", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Savaş", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Ulaşım", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Sağlık", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Spor", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Ekonomi", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Doğal Afet", 1);
+        CRITICAL_TITLE_THRESHOLDS.put("Eğitim", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Turizm", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Çevre", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Siyaset", 2);
+        CRITICAL_TITLE_THRESHOLDS.put("Dünya", 2);
     }
 
     @Transactional
@@ -172,6 +228,11 @@ public class NewsClassificationService {
     }
 
     private ClassificationResult classifyNews(News news) {
+        ClassificationResult criticalRuleResult = classifyWithCriticalRules(news);
+        if (criticalRuleResult != null) {
+            return criticalRuleResult;
+        }
+
         // 1) Tercih: Spark + TF-IDF + Lineer SVM modeli (varsa)
         if (mlClassifierProperties.isEnabled()
                 && sparkNewsClassifier.isPresent()
@@ -203,6 +264,78 @@ public class NewsClassificationService {
         return classifyNewsWithKeywords(news);
     }
 
+    private ClassificationResult classifyWithCriticalRules(News news) {
+        String titleNorm = normalizeForKeywordMatch(news.getTitle() != null ? news.getTitle() : "");
+        String contentNorm = normalizeForKeywordMatch(news.getContent() != null ? news.getContent() : "");
+        if (titleNorm.isBlank()) {
+            return null;
+        }
+
+        Map<String, Long> matchedCategories = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : CRITICAL_TITLE_SIGNALS.entrySet()) {
+            long titleMatches = entry.getValue().stream()
+                    .filter(titleNorm::contains)
+                    .count();
+            int threshold = CRITICAL_TITLE_THRESHOLDS.getOrDefault(entry.getKey(), 2);
+            if (titleMatches >= threshold) {
+                matchedCategories.put(entry.getKey(), titleMatches);
+            }
+        }
+
+        if (matchedCategories.size() == 1) {
+            return new ClassificationResult(matchedCategories.keySet().iterator().next(), BigDecimal.valueOf(0.95));
+        }
+        if (matchedCategories.size() > 1) {
+            return null;
+        }
+
+        // Tek ama çok güçlü adli/vaka sinyali varsa Asayiş'e zorla
+        boolean strongAsayisTitle =
+                titleNorm.contains("bıçaklı saldırı") ||
+                titleNorm.contains("silahlı saldırı") ||
+                titleNorm.contains("cinayet") ||
+                titleNorm.contains("cezası belli oldu") ||
+                titleNorm.contains("mahkeme kararı") ||
+                titleNorm.contains("gözaltına alındı") ||
+                titleNorm.contains("tutuklandı");
+        if (strongAsayisTitle) {
+            return new ClassificationResult("Asayiş", BigDecimal.valueOf(0.97));
+        }
+
+        if (titleNorm.contains("deprem")
+                || titleNorm.contains("sel felaketi")
+                || titleNorm.contains("heyelan")
+                || titleNorm.contains("çığ düştü")) {
+            return new ClassificationResult("Doğal Afet", BigDecimal.valueOf(0.96));
+        }
+
+        if (titleNorm.contains("derbi")
+                || titleNorm.contains("süper lig")
+                || titleNorm.contains("şampiyonlar ligi")) {
+            return new ClassificationResult("Spor", BigDecimal.valueOf(0.96));
+        }
+
+        if (titleNorm.contains("merkez bankası")
+                || titleNorm.contains("faiz kararı")
+                || titleNorm.contains("enflasyon verisi")) {
+            return new ClassificationResult("Ekonomi", BigDecimal.valueOf(0.96));
+        }
+
+        if (titleNorm.contains("sağlık bakanlığı")
+                || titleNorm.contains("yoğun bakım")
+                || titleNorm.contains("aşı kampanyası")) {
+            return new ClassificationResult("Sağlık", BigDecimal.valueOf(0.96));
+        }
+
+        // Sağlık kelimeleri içerikte olsa bile başlıkta adli olay baskınsa Sağlık'a düşmesin
+        if ((titleNorm.contains("bıçak") || titleNorm.contains("öldür") || titleNorm.contains("sanık"))
+                && (contentNorm.contains("hastane") || contentNorm.contains("doktor") || contentNorm.contains("sağlık"))) {
+            return new ClassificationResult("Asayiş", BigDecimal.valueOf(0.93));
+        }
+
+        return null;
+    }
+
     /**
      * Sadece anahtar kelime tabanlı sınıflandırma sonucunu döndürür (test ve doğrulama için).
      * Başlık ağırlığı ve tüm kategori kelimeleri uygulanır.
@@ -211,7 +344,10 @@ public class NewsClassificationService {
         News news = new News();
         news.setTitle(title);
         news.setContent(content != null ? content : "");
-        ClassificationResult r = classifyNewsWithKeywords(news);
+        ClassificationResult r = classifyWithCriticalRules(news);
+        if (r == null) {
+            r = classifyNewsWithKeywords(news);
+        }
         return r != null ? r.categoryName : null;
     }
 

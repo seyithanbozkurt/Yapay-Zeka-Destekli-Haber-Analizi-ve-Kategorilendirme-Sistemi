@@ -34,6 +34,10 @@ public class NewsServiceImpl implements NewsService {
         Source source = sourceRepository.findById(request.getSourceId())
                 .orElseThrow(() -> new com.bitirme.exception.NotFoundException("Kaynak bulunamadı: " + request.getSourceId()));
 
+        request.setExternalId(truncate(request.getExternalId(), 255));
+        request.setTitle(truncate(request.getTitle(), 255));
+        request.setOriginalUrl(truncate(request.getOriginalUrl(), 500));
+
         // Aynı kaynaktan aynı başlıkta haber zaten varsa ekleme (API ve crawler tutarlılığı)
         String normalizedTitle = NewsTitleNormalizer.normalize(request.getTitle());
         if (!normalizedTitle.isEmpty() && normalizedTitle.length() >= 5
@@ -98,8 +102,9 @@ public class NewsServiceImpl implements NewsService {
         }
 
         if (request.getTitle() != null) {
-            news.setTitle(request.getTitle());
-            news.setNormalizedTitle(NewsTitleNormalizer.normalize(request.getTitle()));
+            String safeTitle = truncate(request.getTitle(), 255);
+            news.setTitle(safeTitle);
+            news.setNormalizedTitle(NewsTitleNormalizer.normalize(safeTitle));
         }
 
         if (request.getContent() != null) {
@@ -107,7 +112,7 @@ public class NewsServiceImpl implements NewsService {
         }
 
         if (request.getOriginalUrl() != null) {
-            news.setOriginalUrl(request.getOriginalUrl());
+            news.setOriginalUrl(truncate(request.getOriginalUrl(), 500));
         }
 
         if (request.getLanguage() != null) {
@@ -163,6 +168,13 @@ public class NewsServiceImpl implements NewsService {
                 .map(Category::getName)
                 .collect(Collectors.toSet()));
         return response;
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 }
 

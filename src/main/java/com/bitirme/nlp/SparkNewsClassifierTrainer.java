@@ -6,36 +6,28 @@ import com.bitirme.nlp.config.MlClassifierProperties;
 import com.bitirme.repository.NewsClassificationResultRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.ml.Pipeline;
-import org.apache.spark.ml.PipelineModel;
-import org.apache.spark.ml.PipelineStage;
-import org.apache.spark.ml.classification.LinearSVC;
-import org.apache.spark.ml.classification.OneVsRest;
-import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator;
-import org.apache.spark.ml.feature.HashingTF;
-import org.apache.spark.ml.feature.IDF;
-import org.apache.spark.ml.feature.NGram;
-import org.apache.spark.ml.feature.SQLTransformer;
-import org.apache.spark.ml.feature.Tokenizer;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.mllib.classification.NaiveBayes;
+import org.apache.spark.mllib.classification.NaiveBayesModel;
+import org.apache.spark.mllib.evaluation.MulticlassMetrics;
+import org.apache.spark.mllib.feature.HashingTF;
+import org.apache.spark.mllib.linalg.Vector;
+import org.apache.spark.mllib.regression.LabeledPoint;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import scala.Tuple2;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
 /**
- * Spark ML pipeline: Metin ön işleme → Tokenizer → N-gram (unigram+bigram+trigram) →
- * TF-IDF (Bag of Words + kelime frekansları) → Özellik vektörü → Linear SVM (One-vs-Rest).
- * Eğitim sonrası isteğe bağlı Accuracy, Precision, Recall, F1 değerlendirmesi yapar.
+ * Spark MLlib: Metin ön işleme + N-gram + HashingTF + NaiveBayes.
+ * Spark 3.5'te {@code NaiveBayes.train} iç yolu Catalyst/SQL tarafına düşebildiği için
+ * (SqlBaseLexer) Hibernate ile aynı JVM'de ANTLR runtime çakışması oluşabilir; bu durumda
+ * izole process ({@code SparkStandaloneTrainerMain}) kullanılır.
  */
 @Service
 @RequiredArgsConstructor
@@ -43,7 +35,8 @@ import java.util.*;
 @Slf4j
 public class SparkNewsClassifierTrainer {
 
-    private final SparkSession sparkSession;
+    // SparkContext'i sadece eğitim anında deneyelim (startup'ta patlamasın).
+    private final ObjectProvider<JavaSparkContext> sparkContextProvider;
     private final TurkishTextPreprocessor preprocessor;
     private final MlClassifierProperties properties;
     private final NewsClassificationResultRepository classificationResultRepository;
@@ -81,101 +74,60 @@ public class SparkNewsClassifierTrainer {
             return 0;
         }
 
-        List<Row> rows = new ArrayList<>();
+        List<LabeledExample> examples = new ArrayList<>();
         for (Map.Entry<Long, String> e : newsIdToCategoryName.entrySet()) {
             News news = newsById.get(e.getKey());
             if (news == null) continue;
             String text = preprocessor.preprocess(news.getTitle(), news.getContent());
             if (text.isBlank()) continue;
             int labelIndex = categoryToIndex.getOrDefault(e.getValue(), 0);
-            rows.add(RowFactory.create(text, (double) labelIndex));
+            List<String> tokens = tokenize(text);
+            List<String> terms = expandNGrams(tokens, Math.max(properties.getNGramMin(), properties.getNGramMax()));
+            if (terms.isEmpty()) continue;
+            examples.add(new LabeledExample((double) labelIndex, terms));
         }
 
-        if (rows.size() < properties.getMinTrainingSamples()) {
-            log.warn("After preprocessing, not enough samples: {} (min {}).", rows.size(), properties.getMinTrainingSamples());
+        if (examples.size() < properties.getMinTrainingSamples()) {
+            log.warn("After preprocessing, not enough samples: {} (min {}).", examples.size(), properties.getMinTrainingSamples());
             return 0;
         }
 
-        StructType schema = new StructType(new StructField[]{
-                new StructField("text", DataTypes.StringType, false, Metadata.empty()),
-                new StructField("label", DataTypes.DoubleType, false, Metadata.empty())
-        });
-        Dataset<Row> df = sparkSession.createDataFrame(rows, schema);
+        JavaSparkContext jsc = sparkContextProvider.getIfAvailable();
+        if (jsc == null) {
+            throw new IllegalStateException("SparkContext unavailable; cannot train Spark model.");
+        }
 
-        Dataset<Row> trainData;
-        Dataset<Row> testData = null;
+        List<LabeledExample> trainExamples = examples;
+        List<LabeledExample> testExamples = new ArrayList<>();
         if (properties.isRunEvaluationAfterTrain() && properties.getTestSplitRatio() > 0 && properties.getTestSplitRatio() < 1.0) {
-            Dataset<Row>[] splits = df.randomSplit(new double[]{1.0 - properties.getTestSplitRatio(), properties.getTestSplitRatio()}, properties.getEvaluationSeed());
-            trainData = splits[0];
-            testData = splits[1];
-            if (testData.count() < 5) {
-                testData = null;
-                trainData = df;
-            }
-        } else {
-            trainData = df;
-        }
-
-        List<PipelineStage> stages = new ArrayList<>();
-
-        Tokenizer tokenizer = new Tokenizer()
-                .setInputCol("text")
-                .setOutputCol("words");
-        stages.add(tokenizer);
-
-        String featureInputCol = "words";
-        int nGramMax = Math.max(properties.getNGramMin(), Math.min(properties.getNGramMax(), 3));
-        if (nGramMax >= 2) {
-            NGram bigram = new NGram().setN(2).setInputCol("words").setOutputCol("bigrams");
-            stages.add(bigram);
-            if (nGramMax >= 3) {
-                NGram trigram = new NGram().setN(3).setInputCol("words").setOutputCol("trigrams");
-                stages.add(trigram);
-                SQLTransformer mergeNgrams = new SQLTransformer()
-                        .setStatement("SELECT *, array_union(array_union(words, bigrams), trigrams) AS allTerms FROM __THIS__");
-                stages.add(mergeNgrams);
-                featureInputCol = "allTerms";
-            } else {
-                SQLTransformer mergeNgrams = new SQLTransformer()
-                        .setStatement("SELECT *, array_union(words, bigrams) AS allTerms FROM __THIS__");
-                stages.add(mergeNgrams);
-                featureInputCol = "allTerms";
+            Collections.shuffle(examples, new Random(properties.getEvaluationSeed()));
+            int splitIndex = (int) Math.max(1, Math.floor(examples.size() * (1.0 - properties.getTestSplitRatio())));
+            trainExamples = new ArrayList<>(examples.subList(0, splitIndex));
+            testExamples = new ArrayList<>(examples.subList(splitIndex, examples.size()));
+            if (testExamples.size() < 5) {
+                testExamples = new ArrayList<>();
+                trainExamples = examples;
             }
         }
 
-        HashingTF hashingTF = new HashingTF()
-                .setInputCol(featureInputCol)
-                .setOutputCol("rawFeatures")
-                .setNumFeatures(properties.getNumFeatures() > 0 ? properties.getNumFeatures() : (1 << 18));
+        HashingTF hashingTF = new HashingTF(properties.getNumFeatures() > 0 ? properties.getNumFeatures() : (1 << 18));
+        JavaRDD<List<String>> trainTokens = jsc.parallelize(trainExamples).map(e -> e.terms);
+        JavaRDD<Vector> trainTf = hashingTF.transform(trainTokens);
+        JavaRDD<LabeledPoint> trainPoints = trainTf.zip(jsc.parallelize(trainExamples))
+                .map(t -> new LabeledPoint(t._2.label, t._1));
 
-        IDF idf = new IDF()
-                .setInputCol("rawFeatures")
-                .setOutputCol("features");
+        NaiveBayesModel model = NaiveBayes.train(trainPoints.rdd(), 1.0, "multinomial");
 
-        LinearSVC linearSVC = new LinearSVC()
-                .setFeaturesCol("features")
-                .setLabelCol("label")
-                .setPredictionCol("prediction")
-                .setMaxIter(properties.getMaxIter())
-                .setRegParam(properties.getRegParam());
-
-        OneVsRest ovr = new OneVsRest()
-                .setClassifier(linearSVC)
-                .setLabelCol("label")
-                .setFeaturesCol("features")
-                .setPredictionCol("prediction");
-
-        stages.add(hashingTF);
-        stages.add(idf);
-        stages.add(ovr);
-
-        Pipeline pipeline = new Pipeline().setStages(stages.toArray(new PipelineStage[0]));
-        PipelineModel model = pipeline.fit(trainData);
-
-        if (testData != null && properties.isRunEvaluationAfterTrain()) {
+        if (!testExamples.isEmpty() && properties.isRunEvaluationAfterTrain()) {
             try {
-                Dataset<Row> predictions = model.transform(testData);
-                lastEvaluationMetrics = computeMetrics(predictions, categoryNames);
+                JavaRDD<List<String>> testTokens = jsc.parallelize(testExamples).map(e -> e.terms);
+                JavaRDD<Vector> testTf = hashingTF.transform(testTokens);
+                JavaRDD<LabeledPoint> testPoints = testTf.zip(jsc.parallelize(testExamples))
+                        .map(t -> new LabeledPoint(t._2.label, t._1));
+                JavaRDD<Tuple2<Object, Object>> predictionAndLabels = testPoints.map(
+                        p -> new Tuple2<>(model.predict(p.features()), p.label())
+                );
+                lastEvaluationMetrics = computeMetrics(predictionAndLabels);
                 log.info("Evaluation - Accuracy: {}, Weighted F1: {}", lastEvaluationMetrics.getAccuracy(), lastEvaluationMetrics.getWeightedF1());
             } catch (Exception ex) {
                 log.warn("Evaluation failed: {}", ex.getMessage());
@@ -183,34 +135,26 @@ public class SparkNewsClassifierTrainer {
         }
 
         Path dir = Path.of(properties.getModelPath());
-        Path pipelinePath = dir.resolve("pipeline");
+        Path modelPath = dir.resolve("pipeline");
         Path labelsPath = dir.resolve("labels.txt");
         try {
-            Files.createDirectories(pipelinePath);
-            model.save(pipelinePath.toString());
+            Files.createDirectories(modelPath);
+            model.save(jsc.sc(), modelPath.toString());
             Files.write(labelsPath, categoryNames);
-            log.info("Model saved. Samples: {}, Categories: {}, N-gram max: {}", rows.size(), categoryNames.size(), nGramMax);
+            log.info("Spark MLlib model saved. Samples: {}, Categories: {}", examples.size(), categoryNames.size());
         } catch (Exception e) {
             log.error("Failed to save model: {}", e.getMessage());
             return 0;
         }
-        return rows.size();
+        return examples.size();
     }
 
-    private MlEvaluationMetrics computeMetrics(Dataset<Row> predictions, List<String> categoryNames) {
-        MulticlassClassificationEvaluator accEvaluator = new MulticlassClassificationEvaluator()
-                .setLabelCol("label").setPredictionCol("prediction").setMetricName("accuracy");
-        MulticlassClassificationEvaluator f1Evaluator = new MulticlassClassificationEvaluator()
-                .setLabelCol("label").setPredictionCol("prediction").setMetricName("f1");
-        MulticlassClassificationEvaluator precEvaluator = new MulticlassClassificationEvaluator()
-                .setLabelCol("label").setPredictionCol("prediction").setMetricName("weightedPrecision");
-        MulticlassClassificationEvaluator recEvaluator = new MulticlassClassificationEvaluator()
-                .setLabelCol("label").setPredictionCol("prediction").setMetricName("weightedRecall");
-
-        double accuracy = accEvaluator.evaluate(predictions);
-        double weightedF1 = f1Evaluator.evaluate(predictions);
-        double weightedPrecision = precEvaluator.evaluate(predictions);
-        double weightedRecall = recEvaluator.evaluate(predictions);
+    private MlEvaluationMetrics computeMetrics(JavaRDD<Tuple2<Object, Object>> predictionAndLabels) {
+        MulticlassMetrics metrics = new MulticlassMetrics(predictionAndLabels.rdd());
+        double accuracy = metrics.accuracy();
+        double weightedF1 = metrics.weightedFMeasure();
+        double weightedPrecision = metrics.weightedPrecision();
+        double weightedRecall = metrics.weightedRecall();
 
         return MlEvaluationMetrics.builder()
                 .accuracy(accuracy)
@@ -218,11 +162,40 @@ public class SparkNewsClassifierTrainer {
                 .weightedRecall(weightedRecall)
                 .weightedF1(weightedF1)
                 .macroF1(weightedF1)
-                .testSampleCount((int) predictions.count())
+                .testSampleCount((int) predictionAndLabels.count())
                 .build();
     }
 
     public MlEvaluationMetrics getLastEvaluationMetrics() {
         return lastEvaluationMetrics;
+    }
+
+    private List<String> tokenize(String text) {
+        if (text == null || text.isBlank()) return List.of();
+        return Arrays.stream(text.split("\\s+"))
+                .filter(t -> !t.isBlank())
+                .toList();
+    }
+
+    private List<String> expandNGrams(List<String> tokens, int nGramMax) {
+        if (tokens.isEmpty()) return List.of();
+        int maxN = Math.max(1, Math.min(3, nGramMax));
+        List<String> terms = new ArrayList<>(tokens);
+        for (int n = 2; n <= maxN; n++) {
+            for (int i = 0; i + n <= tokens.size(); i++) {
+                terms.add(String.join("_", tokens.subList(i, i + n)));
+            }
+        }
+        return terms;
+    }
+
+    private static class LabeledExample {
+        final double label;
+        final List<String> terms;
+
+        private LabeledExample(double label, List<String> terms) {
+            this.label = label;
+            this.terms = terms;
+        }
     }
 }

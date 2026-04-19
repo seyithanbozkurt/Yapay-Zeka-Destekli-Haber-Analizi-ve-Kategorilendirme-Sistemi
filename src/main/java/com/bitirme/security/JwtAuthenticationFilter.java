@@ -30,6 +30,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
+        // ML uçları: JWT + UserDetailsService DB'ye gidebilir; Swagger'da takılmayı önlemek için atla
+        String uri = request.getRequestURI();
+        String servletPath = request.getServletPath();
+        if ((uri != null && uri.contains("/api/ml"))
+                || (servletPath != null && servletPath.startsWith("/api/ml"))) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String username;
