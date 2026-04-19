@@ -7,7 +7,7 @@ import com.bitirme.dto.feed.UserFeedBackUpdateRequest;
 import java.util.List;
 
 public interface UserFeedBackService {
-    UserFeedBackResponse create(UserFeedBackCreateRequest request);
+    UserFeedBackResponse create(UserFeedBackCreateRequest request, String username);
     UserFeedBackResponse getById(Long id);
     List<UserFeedBackResponse> getAll();
     UserFeedBackResponse update(Long id, UserFeedBackUpdateRequest request);

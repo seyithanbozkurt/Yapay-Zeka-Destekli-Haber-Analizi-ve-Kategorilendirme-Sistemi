@@ -12,6 +12,11 @@ public interface NewsClassificationResultService {
     List<NewsClassificationResultResponse> getAll();
     NewsClassificationResultResponse update(Long id, NewsClassificationResultUpdateRequest request);
     void delete(Long id);
+    
+    /**
+     * Belirli bir habere ait sınıflandırma sonuçlarını döner.
+     */
+    List<NewsClassificationResultResponse> getByNewsId(Long newsId);
 }
 
 

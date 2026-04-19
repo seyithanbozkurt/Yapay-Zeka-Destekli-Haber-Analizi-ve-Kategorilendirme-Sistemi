@@ -16,10 +16,6 @@ public class UserFeedBackCreateRequest {
     @Schema(description = "Haber ID'si", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long newsId;
     
-    @NotNull(message = "Kullanıcı ID boş olamaz")
-    @Schema(description = "Kullanıcı ID'si", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
-    private Long userId;
-    
     @Schema(description = "Model versiyonu ID'si", example = "1")
     private Integer modelVersionId;
     
