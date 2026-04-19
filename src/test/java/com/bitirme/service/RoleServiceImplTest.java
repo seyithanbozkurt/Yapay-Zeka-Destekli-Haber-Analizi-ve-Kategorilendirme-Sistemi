@@ -33,7 +33,7 @@ class RoleServiceImplTest {
 
     @Test
     @DisplayName("create")
-    void create() {
+    void createTest() {
         RoleCreateRequest req = new RoleCreateRequest();
         req.setName("MOD");
         req.setDescription("d");
@@ -51,7 +51,7 @@ class RoleServiceImplTest {
 
     @Test
     @DisplayName("create: isim çakışması")
-    void create_duplicate() {
+    void createDuplicateTest() {
         RoleCreateRequest req = new RoleCreateRequest();
         req.setName("ADMIN");
         when(roleRepository.existsByName("ADMIN")).thenReturn(true);
@@ -60,21 +60,21 @@ class RoleServiceImplTest {
 
     @Test
     @DisplayName("getById: yok")
-    void getById_notFound() {
+    void getByIdNotFoundTest() {
         when(roleRepository.findById(99)).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class, () -> roleService.getById(99));
     }
 
     @Test
     @DisplayName("delete: yok")
-    void delete_notFound() {
+    void deleteNotFoundTest() {
         when(roleRepository.existsById(99)).thenReturn(false);
         assertThrows(NotFoundException.class, () -> roleService.delete(99));
     }
 
     @Test
     @DisplayName("update")
-    void update() {
+    void updateTest() {
         Role existing = new Role();
         existing.setId(1);
         existing.setName("OLD");

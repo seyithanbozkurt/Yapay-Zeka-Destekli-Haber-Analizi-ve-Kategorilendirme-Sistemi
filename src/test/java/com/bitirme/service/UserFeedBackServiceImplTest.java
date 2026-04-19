@@ -44,7 +44,7 @@ class UserFeedBackServiceImplTest {
 
     @Test
     @DisplayName("create haber yoksa NotFoundException")
-    void create_news_missing() {
+    void createNewsMissingTest() {
         UserFeedBackCreateRequest req = buildRequest();
         when(newsRepository.findById(1L)).thenReturn(Optional.empty());
 
@@ -54,7 +54,7 @@ class UserFeedBackServiceImplTest {
 
     @Test
     @DisplayName("create başarılı")
-    void create_success() {
+    void createSuccessTest() {
         UserFeedBackCreateRequest req = buildRequest();
         News news = new News();
         news.setId(1L);

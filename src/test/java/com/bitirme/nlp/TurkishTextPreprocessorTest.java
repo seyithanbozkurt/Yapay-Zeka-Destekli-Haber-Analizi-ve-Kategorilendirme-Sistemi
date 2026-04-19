@@ -13,7 +13,7 @@ class TurkishTextPreprocessorTest {
 
     @Test
     @DisplayName("null veya boş metin boş string döner")
-    void preprocess_null_or_blank() {
+    void preprocessNullOrBlankTest() {
         assertThat(preprocessor.preprocess((String) null)).isEmpty();
         assertThat(preprocessor.preprocess("   ")).isEmpty();
         assertThat(preprocessor.preprocess(null, null)).isEmpty();
@@ -21,7 +21,7 @@ class TurkishTextPreprocessorTest {
 
     @Test
     @DisplayName("başlık ve içerik birleştirilip tokenize edilir")
-    void preprocess_title_and_content() {
+    void preprocessTitleAndContentTest() {
         String out = preprocessor.preprocess(
                 "Galatasaray ve Fenerbahçe Maçı",
                 "Bu hafta sonu için büyük derbi."
@@ -33,7 +33,7 @@ class TurkishTextPreprocessorTest {
 
     @Test
     @DisplayName("preprocessToTokens boş olmayan token listesi döner")
-    void preprocessToTokens_splits_on_whitespace() {
+    void preprocessToTokensSplitsOnWhitespaceTest() {
         List<String> tokens = preprocessor.preprocessToTokens("Ekonomi borsa dolar");
         assertThat(tokens).isNotEmpty();
         assertThat(String.join(" ", tokens)).contains("ekonomi");

@@ -32,7 +32,7 @@ class DynamicNewsCrawlerServiceTest {
 
     @Test
     @DisplayName("crawlAllSources aktif kaynak yoksa 0 döner")
-    void crawlAllSources_no_active_sources() {
+    void crawlAllSourcesNoActiveSourcesTest() {
         when(sourceRepository.findByActiveTrue()).thenReturn(Collections.emptyList());
 
         int total = dynamicNewsCrawlerService.crawlAllSources();

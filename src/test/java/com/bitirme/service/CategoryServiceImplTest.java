@@ -33,7 +33,7 @@ class CategoryServiceImplTest {
 
     @Test
     @DisplayName("create")
-    void create() {
+    void createTest() {
         CategoryCreateRequest req = new CategoryCreateRequest();
         req.setName("X");
         req.setDescription("d");
@@ -52,7 +52,7 @@ class CategoryServiceImplTest {
 
     @Test
     @DisplayName("create: isim çakışması")
-    void create_duplicate() {
+    void createDuplicateTest() {
         CategoryCreateRequest req = new CategoryCreateRequest();
         req.setName("Dup");
         req.setDescription("d");
@@ -62,14 +62,14 @@ class CategoryServiceImplTest {
 
     @Test
     @DisplayName("getById: yok")
-    void getById_notFound() {
+    void getByIdNotFoundTest() {
         when(categoryRepository.findById(99)).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class, () -> categoryService.getById(99));
     }
 
     @Test
     @DisplayName("update")
-    void update() {
+    void updateTest() {
         Category c = new Category();
         c.setId(1);
         c.setName("N1");

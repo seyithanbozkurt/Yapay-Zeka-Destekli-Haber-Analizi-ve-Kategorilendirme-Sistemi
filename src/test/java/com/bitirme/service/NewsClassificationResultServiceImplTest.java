@@ -42,7 +42,7 @@ class NewsClassificationResultServiceImplTest {
 
     @Test
     @DisplayName("create haber yoksa NotFoundException")
-    void create_news_missing() {
+    void createNewsMissingTest() {
         NewsClassificationResultCreateRequest req = new NewsClassificationResultCreateRequest();
         req.setNewsId(1L);
         req.setModelVersionId(1);
@@ -55,7 +55,7 @@ class NewsClassificationResultServiceImplTest {
 
     @Test
     @DisplayName("create tüm referanslar varsa kayıt yapılır")
-    void create_success() {
+    void createSuccessTest() {
         NewsClassificationResultCreateRequest req = new NewsClassificationResultCreateRequest();
         req.setNewsId(1L);
         req.setModelVersionId(1);

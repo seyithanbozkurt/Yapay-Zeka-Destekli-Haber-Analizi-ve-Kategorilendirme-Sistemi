@@ -23,7 +23,7 @@ class NewsCrawlerServiceTest {
 
     @Test
     @DisplayName("crawlAllSources DynamicNewsCrawlerService'e delege eder")
-    void crawlAllSources_delegates() {
+    void crawlAllSourcesDelegatesTest() {
         when(dynamicNewsCrawlerService.crawlAllSources()).thenReturn(3);
 
         int n = newsCrawlerService.crawlAllSources();
@@ -34,7 +34,7 @@ class NewsCrawlerServiceTest {
 
     @Test
     @DisplayName("crawlSource delege eder")
-    void crawlSource_delegates() {
+    void crawlSourceDelegatesTest() {
         Source s = new Source();
         s.setId(1);
         when(dynamicNewsCrawlerService.crawlSource(s)).thenReturn(2);
@@ -45,7 +45,7 @@ class NewsCrawlerServiceTest {
 
     @Test
     @DisplayName("crawlBreakingNews delege eder")
-    void crawlBreakingNews_delegates() {
+    void crawlBreakingNewsDelegatesTest() {
         when(dynamicNewsCrawlerService.crawlBreakingNews()).thenReturn(1);
 
         assertThat(newsCrawlerService.crawlBreakingNews()).isEqualTo(1);

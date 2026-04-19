@@ -59,7 +59,7 @@ class MlModelTrainingServiceTest {
 
     @Test
     @DisplayName("runFullTrainingSync Spark kapalıyken Naive Bayes train çağrılır")
-    void runFullTraining_sync_calls_naive_bayes() {
+    void runFullTrainingSyncCallsNaiveBayesTest() {
         MlModelTrainingService.TrainingOutcome outcome = service.runFullTrainingSync();
 
         assertThat(outcome.message()).isNotBlank();
@@ -70,7 +70,7 @@ class MlModelTrainingServiceTest {
 
     @Test
     @DisplayName("başlangıçta son snapshot null")
-    void last_snapshot_initially_null() {
+    void lastSnapshotInitiallyNullTest() {
         assertThat(service.getLastTrainingSnapshot()).isNull();
     }
 }

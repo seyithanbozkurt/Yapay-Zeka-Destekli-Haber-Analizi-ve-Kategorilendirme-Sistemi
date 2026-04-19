@@ -31,7 +31,7 @@ class SourceServiceImplTest {
 
     @Test
     @DisplayName("getById kaynak yoksa NotFoundException")
-    void getById_not_found() {
+    void getByIdNotFoundTest() {
         when(sourceRepository.findById(1)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> sourceService.getById(1))
@@ -40,7 +40,7 @@ class SourceServiceImplTest {
 
     @Test
     @DisplayName("create aynı isimde kaynak AlreadyExistsException")
-    void create_duplicate() {
+    void createDuplicateTest() {
         SourceCreateRequest req = new SourceCreateRequest();
         req.setName("AA");
         when(sourceRepository.existsByName("AA")).thenReturn(true);
@@ -51,7 +51,7 @@ class SourceServiceImplTest {
 
     @Test
     @DisplayName("create minimal alanlarla kaynak oluşturur")
-    void create_success() {
+    void createSuccessTest() {
         SourceCreateRequest req = new SourceCreateRequest();
         req.setName("Kaynak1");
         req.setBaseUrl("https://example.com");

@@ -43,7 +43,7 @@ class NaiveBayesNewsClassifierTest {
 
     @Test
     @DisplayName("aktif sonuç yokken train modeli hazır etmez")
-    void train_empty_results_model_not_ready() {
+    void trainEmptyResultsModelNotReadyTest() {
         when(classificationResultRepository.findByActiveTrue()).thenReturn(Collections.emptyList());
 
         classifier.train();
@@ -55,7 +55,7 @@ class NaiveBayesNewsClassifierTest {
 
     @Test
     @DisplayName("model hazır değilken classify boş döner")
-    void classify_when_not_ready_returns_empty() {
+    void classifyWhenNotReadyReturnsEmptyTest() {
         when(classificationResultRepository.findByActiveTrue()).thenReturn(Collections.emptyList());
         classifier.train();
 
@@ -69,7 +69,7 @@ class NaiveBayesNewsClassifierTest {
 
     @Test
     @DisplayName("null haber için classify boş")
-    void classify_null_news_empty() {
+    void classifyNullNewsEmptyTest() {
         assertThat(classifier.classify(null)).isEmpty();
     }
 }

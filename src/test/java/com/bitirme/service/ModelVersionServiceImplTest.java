@@ -34,7 +34,7 @@ class ModelVersionServiceImplTest {
 
     @Test
     @DisplayName("getById yoksa NotFoundException")
-    void getById_not_found() {
+    void getByIdNotFoundTest() {
         when(modelVersionRepository.findById(1)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getById(1))
@@ -43,7 +43,7 @@ class ModelVersionServiceImplTest {
 
     @Test
     @DisplayName("create createdById geçersizse NotFoundException")
-    void create_user_missing() {
+    void createUserMissingTest() {
         ModelVersionCreateRequest req = new ModelVersionCreateRequest();
         req.setName("v1");
         req.setCreatedById(99L);
@@ -55,7 +55,7 @@ class ModelVersionServiceImplTest {
 
     @Test
     @DisplayName("create kullanıcı olmadan kaydeder")
-    void create_without_user() {
+    void createWithoutUserTest() {
         ModelVersionCreateRequest req = new ModelVersionCreateRequest();
         req.setName("v2");
         req.setDescription("d");

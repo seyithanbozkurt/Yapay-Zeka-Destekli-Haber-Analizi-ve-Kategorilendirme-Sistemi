@@ -29,7 +29,7 @@ class CustomUserDetailsServiceTest {
 
     @Test
     @DisplayName("loadUserByUsername: başarılı")
-    void loadUserByUsername_success() {
+    void loadUserByUsernameSuccessTest() {
         Role r = new Role();
         r.setName("ADMIN");
         User u = new User();
@@ -47,14 +47,14 @@ class CustomUserDetailsServiceTest {
 
     @Test
     @DisplayName("loadUserByUsername: kullanıcı yok")
-    void loadUserByUsername_missing() {
+    void loadUserByUsernameMissingTest() {
         when(userRepository.findByUsername("x")).thenReturn(java.util.Optional.empty());
         assertThrows(UsernameNotFoundException.class, () -> customUserDetailsService.loadUserByUsername("x"));
     }
 
     @Test
     @DisplayName("loadUserByUsername: pasif kullanıcı")
-    void loadUserByUsername_inactive() {
+    void loadUserByUsernameInactiveTest() {
         User u = new User();
         u.setUsername("u");
         u.setPasswordHash("h");

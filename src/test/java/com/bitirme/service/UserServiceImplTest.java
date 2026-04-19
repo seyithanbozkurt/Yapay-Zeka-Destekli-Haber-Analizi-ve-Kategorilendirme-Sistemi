@@ -48,7 +48,7 @@ class UserServiceImplTest {
 
     @Test
     @DisplayName("create: başarılı kayıt")
-    void create_success() {
+    void createSuccessTest() {
         UserCreateRequest req = new UserCreateRequest();
         req.setUsername("u1");
         req.setEmail("u1@test.com");
@@ -82,7 +82,7 @@ class UserServiceImplTest {
 
     @Test
     @DisplayName("create: kullanıcı adı mevcut")
-    void create_duplicateUsername() {
+    void createDuplicateUsernameTest() {
         UserCreateRequest req = new UserCreateRequest();
         req.setUsername("dup");
         req.setEmail("e@test.com");
@@ -94,14 +94,14 @@ class UserServiceImplTest {
 
     @Test
     @DisplayName("getById: bulunamadı")
-    void getById_notFound() {
+    void getByIdNotFoundTest() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class, () -> userService.getById(99L));
     }
 
     @Test
     @DisplayName("delete: bulunamadı")
-    void delete_notFound() {
+    void deleteNotFoundTest() {
         when(userRepository.existsById(99L)).thenReturn(false);
         assertThrows(NotFoundException.class, () -> userService.delete(99L));
     }

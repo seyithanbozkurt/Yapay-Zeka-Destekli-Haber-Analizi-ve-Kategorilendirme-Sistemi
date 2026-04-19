@@ -54,7 +54,7 @@ class AuthServiceTest {
 
     @Test
     @DisplayName("login: başarılı")
-    void login_success() {
+    void loginSuccessTest() {
         LoginRequest req = new LoginRequest();
         req.setUsername("admin");
         req.setPassword("secret");
@@ -73,7 +73,7 @@ class AuthServiceTest {
 
     @Test
     @DisplayName("login: hatalı kimlik")
-    void login_badCredentials() {
+    void loginBadCredentialsTest() {
         LoginRequest req = new LoginRequest();
         req.setUsername("u");
         req.setPassword("bad");
@@ -84,7 +84,7 @@ class AuthServiceTest {
 
     @Test
     @DisplayName("register: e-posta çakışması")
-    void register_duplicateEmail() {
+    void registerDuplicateEmailTest() {
         RegisterRequest req = new RegisterRequest();
         req.setEmail("taken@test.com");
         req.setFirstName("A");
@@ -98,7 +98,7 @@ class AuthServiceTest {
 
     @Test
     @DisplayName("register: USER rolü yok")
-    void register_userRoleMissing() {
+    void registerUserRoleMissingTest() {
         RegisterRequest req = new RegisterRequest();
         req.setEmail("new@test.com");
         req.setFirstName("A");
@@ -113,7 +113,7 @@ class AuthServiceTest {
 
     @Test
     @DisplayName("register: başarılı")
-    void register_success() {
+    void registerSuccessTest() {
         RegisterRequest req = new RegisterRequest();
         req.setEmail("fresh@test.com");
         req.setFirstName("A");

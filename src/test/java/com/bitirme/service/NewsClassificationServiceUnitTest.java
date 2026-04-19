@@ -1,7 +1,5 @@
 package com.bitirme.service;
 
-import com.bitirme.nlp.NaiveBayesNewsClassifier;
-import com.bitirme.nlp.SparkNewsClassifier;
 import com.bitirme.nlp.config.MlClassifierProperties;
 import com.bitirme.repository.CategoryRepository;
 import com.bitirme.repository.ModelVersionRepository;
@@ -20,12 +18,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/**
- * {@link NewsClassificationService} için Mockito tabanlı hızlı birim testleri
- * (mevcut {@link NewsClassificationServiceTest} SpringBootTest ile tamamlayıcıdır).
- */
 @ExtendWith(MockitoExtension.class)
 class NewsClassificationServiceUnitTest {
 
@@ -57,7 +52,7 @@ class NewsClassificationServiceUnitTest {
 
     @Test
     @DisplayName("predictCategoryKeywordOnly cinayet başlığında Asayiş")
-    void predict_asayis_from_title() {
+    void predictAsayisFromTitleTest() {
         String cat = newsClassificationService.predictCategoryKeywordOnly(
                 "Cinayet zanlısı adliyede",
                 "Mahkeme süreci devam ediyor."
@@ -67,17 +62,30 @@ class NewsClassificationServiceUnitTest {
 
     @Test
     @DisplayName("predictCategoryKeywordOnly spor başlığında Spor")
-    void predict_spor() {
+    void predictSporTest() {
         String cat = newsClassificationService.predictCategoryKeywordOnly(
-                "Galatasaray maçı ne zaman",
+                "Fenerbahçe maçı ne zaman",
                 "Detaylar"
         );
         assertThat(cat).isEqualTo("Spor");
     }
+    @Test
+    @DisplayName("beyaz kutu: Turizm kritik başlık sinyalleri fallback'e gitmeden Turizm döner")
+    void predictTurizmTest() {
+        // White-box beklenti: başlıkta en az 2 Turizm kritik sinyali (otel, rezervasyon)
+        // bulunduğunda classifyWithCriticalRules devreye girer ve DB fallback çağrılmaz.
+        String cat = newsClassificationService.predictCategoryKeywordOnly(
+                "Otel rezervasyon sayıları arttı",
+                "Borsa, dolar ve faiz konuşulsa da turizm haberi."
+        );
+
+        assertThat(cat).isEqualTo("Turizm");
+        verifyNoInteractions(categoryRepository);
+    }
 
     @Test
     @DisplayName("anahtar kelime yokken DB'de Diğer yoksa ve kategori listesi boşsa null")
-    void predict_gibberish_no_category_match_returns_null() {
+    void predictGibberishNoCategoryMatchReturnsNullTest() {
         when(categoryRepository.findAll()).thenReturn(Collections.emptyList());
         when(categoryRepository.findByName("Diğer")).thenReturn(Optional.empty());
 
@@ -90,7 +98,7 @@ class NewsClassificationServiceUnitTest {
 
     @Test
     @DisplayName("anahtar kelime yokken metinde geçen kategori adı ile eşleşir")
-    void predict_matches_category_name_from_database() {
+    void predictMatchesCategoryNameFromDatabaseTest() {
         Category catRow = new Category();
         catRow.setName("Qwertyuniquecatname");
         catRow.setActive(true);

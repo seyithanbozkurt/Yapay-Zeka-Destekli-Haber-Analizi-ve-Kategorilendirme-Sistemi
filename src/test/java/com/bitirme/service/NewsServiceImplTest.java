@@ -41,7 +41,7 @@ class NewsServiceImplTest {
 
     @Test
     @DisplayName("getById haber yoksa NotFoundException")
-    void getById_not_found() {
+    void getByIdNotFoundTest() {
         when(newsRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> newsService.getById(1L))
@@ -50,7 +50,7 @@ class NewsServiceImplTest {
 
     @Test
     @DisplayName("create kaynak yoksa NotFoundException")
-    void create_source_missing() {
+    void createSourceMissingTest() {
         NewsCreateRequest req = new NewsCreateRequest();
         req.setSourceId(9);
         req.setTitle("Başlık");
@@ -62,7 +62,7 @@ class NewsServiceImplTest {
 
     @Test
     @DisplayName("create aynı kaynak ve normalize başlıkta AlreadyExistsException")
-    void create_duplicate_normalized_title() {
+    void createDuplicateNormalizedTitleTest() {
         Source src = new Source();
         src.setId(1);
         NewsCreateRequest req = new NewsCreateRequest();
@@ -77,7 +77,7 @@ class NewsServiceImplTest {
 
     @Test
     @DisplayName("create başarılı")
-    void create_success() {
+    void createSuccessTest() {
         Source src = new Source();
         src.setId(1);
         NewsCreateRequest req = new NewsCreateRequest();

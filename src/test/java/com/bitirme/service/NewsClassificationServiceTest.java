@@ -19,7 +19,7 @@ class NewsClassificationServiceTest {
 
     @Test
     @DisplayName("Cinayet/ceza haberi Asayiş kategorisine düşmeli")
-    void asayis_cinayet_ceza() {
+    void asayisCinayetCezaTest() {
         if (newsClassificationService == null) return;
         String title = "Oğlunu parkta 37 bıçak darbesi ile öldürmüştü: Cezası belli oldu";
         String content = "Mahkeme kararı açıklandı.";
@@ -29,7 +29,7 @@ class NewsClassificationServiceTest {
 
     @Test
     @DisplayName("Bıçak ve ceza geçen haber Asayiş olmalı (içerikte başka kelimeler olsa bile)")
-    void asayis_baskin_baslik() {
+    void asayisBaskinBaslikTest() {
         if (newsClassificationService == null) return;
         String title = "Bıçaklı saldırı: Sanık ceza aldı";
         String content = "Yol ve trafik düzenlemesi kapsamında bölgede çalışma yapıldı. Mahkeme kararı açıklandı.";
@@ -39,7 +39,7 @@ class NewsClassificationServiceTest {
 
     @Test
     @DisplayName("Savaş kelimesi geçen haber Savaş kategorisinde olmalı")
-    void savas_kategori() {
+    void savasKategoriTest() {
         if (newsClassificationService == null) return;
         String title = "Savaş bölgesinde ateşkes ilan edildi";
         String content = "Çatışma tarafları anlaştı.";
@@ -49,7 +49,7 @@ class NewsClassificationServiceTest {
 
     @Test
     @DisplayName("Trafik kazası haberi Ulaşım olmalı")
-    void ulasim_trafik_kazasi() {
+    void ulasimTrafikKazasiTest() {
         if (newsClassificationService == null) return;
         String title = "Ankara'da trafik kazası: 2 yaralı";
         String content = "Trafik yoğunluğu nedeniyle kaza meydana geldi.";
@@ -59,7 +59,7 @@ class NewsClassificationServiceTest {
 
     @Test
     @DisplayName("Sadece 'kaza' geçen haber Ulaşım değil Asayiş/Diğer olabilir (trafik kazası değilse)")
-    void kaza_tek_basina_ulasim_degil() {
+    void kazaTekBasinaUlasimDegilTest() {
         if (newsClassificationService == null) return;
         String title = "İş kazası: 1 işçi yaralandı";
         String content = "Fabrikada kaza meydana geldi.";
@@ -69,7 +69,7 @@ class NewsClassificationServiceTest {
 
     @Test
     @DisplayName("Spor haberi Spor kategorisinde olmalı")
-    void spor_kategori() {
+    void sporKategoriTest() {
         if (newsClassificationService == null) return;
         String title = "Süper Lig'de maç sonucu: Galatasaray kazandı";
         String content = "Futbol maçı heyecanlı geçti.";
@@ -79,7 +79,7 @@ class NewsClassificationServiceTest {
 
     @Test
     @DisplayName("Ekonomi haberi Ekonomi kategorisinde olmalı")
-    void ekonomi_kategori() {
+    void ekonomiKategoriTest() {
         if (newsClassificationService == null) return;
         String title = "Merkez Bankası faiz kararı açıkladı";
         String content = "Dolar ve euro kuru yükselişte.";

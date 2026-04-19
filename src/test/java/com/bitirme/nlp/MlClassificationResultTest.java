@@ -11,7 +11,7 @@ class MlClassificationResultTest {
 
     @Test
     @DisplayName("of fabrika metodu kategori ve güveni set eder")
-    void of_sets_category_and_confidence() {
+    void ofSetsCategoryAndConfidenceTest() {
         MlClassificationResult r = MlClassificationResult.of("Spor", 0.85);
         assertThat(r.getCategoryName()).isEqualTo("Spor");
         assertThat(r.getConfidence()).isEqualByComparingTo(BigDecimal.valueOf(0.85));
