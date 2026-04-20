@@ -78,8 +78,8 @@ public class ScheduledTasks {
         }
     }
 
-    // Her 5 saatte bir haber kayıtlarını sil ve yeni haberleri çek (cron: 0 * */5 *  * ?)
-    @Scheduled(cron = "0 * */5 * *  ?")
+    // Her 5 saatte bir haber kayıtlarını sil ve yeni haberleri çek (00:00, 05:00, 10:00, 15:00, 20:00)
+    @Scheduled(cron = "0 0 */5 * * ?")
     @Transactional
     public void deleteAndRefreshNews() {
         if (!deleteRefreshEnabled) {

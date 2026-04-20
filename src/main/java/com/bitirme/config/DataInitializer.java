@@ -323,6 +323,15 @@ public class DataInitializer implements CommandLineRunner {
             addedCount++;
         }
         
+        if (!existingCategories.containsKey("Savaş")) {
+            Category categorySavas = new Category();
+            categorySavas.setName("Savaş");
+            categorySavas.setDescription("Savaş, çatışma ve savunma haberleri kategorisi");
+            categorySavas.setActive(true);
+            categoryRepository.save(categorySavas);
+            addedCount++;
+        }
+        
         if (!existingCategories.containsKey("Diğer")) {
             Category category17 = new Category();
             category17.setName("Diğer");

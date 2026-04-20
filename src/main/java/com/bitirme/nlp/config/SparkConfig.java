@@ -2,43 +2,55 @@ package com.bitirme.nlp.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.SparkConf;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import jakarta.annotation.PreDestroy;
 
 /**
- * SparkSession bean (local mode). ML pipeline bu session ile çalışır.
+ * JavaSparkContext bean (local mode). RDD tabanlı Spark MLlib bu context ile çalışır.
  */
 @Configuration
 @ConditionalOnProperty(prefix = "ml.classifier", name = "enabled", havingValue = "true")
 @Slf4j
 public class SparkConfig {
 
-    private SparkSession sparkSession;
+    private JavaSparkContext sparkContext;
 
+    @Lazy
     @Bean
-    public SparkSession sparkSession(MlClassifierProperties properties) {
+    public JavaSparkContext sparkContext(MlClassifierProperties properties) {
+        // Not: SecurityManager'ı runtime'da kurmak (System.setSecurityManager) Logback/Spring gibi kütüphanelerde
+        // izin hatalarına sebep olabiliyor. Spark için gereken "allow" davranışı JVM açılış argümanında
+        // (-Djava.security.manager=allow) sağlanmalı.
+        log.info(
+                "Spark init - java.security.manager property: {}, SecurityManager active: {}",
+                System.getProperty("java.security.manager"),
+                System.getSecurityManager() != null
+        );
         SparkConf conf = new SparkConf()
                 .setAppName("NewsClassifier")
                 .setMaster(properties.getSparkMaster())
-                .set("spark.driver.host", "localhost")
+                // Bazı ortamlarda (özellikle container/sandbox) `localhost` DNS/IP çözümlemesi patlayabiliyor.
+                // Spark'ın local mode içinde ağ adresine ihtiyaç duymasını `127.0.0.1` ile güvenli hale getiriyoruz.
+                .set("spark.driver.host", "127.0.0.1")
+                .set("spark.driver.bindAddress", "127.0.0.1")
+                .set("spark.local.ip", "127.0.0.1")
+                .set("spark.local.hostname", "127.0.0.1")
                 .set("spark.ui.enabled", "false");
-        sparkSession = SparkSession.builder()
-                .config(conf)
-                .getOrCreate();
-        sparkSession.sparkContext().setLogLevel("WARN");
-        log.info("SparkSession created with master: {}", properties.getSparkMaster());
-        return sparkSession;
+        sparkContext = new JavaSparkContext(conf);
+        log.info("JavaSparkContext created with master: {}", properties.getSparkMaster());
+        return sparkContext;
     }
 
     @PreDestroy
     public void close() {
-        if (sparkSession != null) {
-            sparkSession.close();
-            log.info("SparkSession closed.");
+        if (sparkContext != null) {
+            sparkContext.close();
+            log.info("JavaSparkContext closed.");
         }
     }
 }

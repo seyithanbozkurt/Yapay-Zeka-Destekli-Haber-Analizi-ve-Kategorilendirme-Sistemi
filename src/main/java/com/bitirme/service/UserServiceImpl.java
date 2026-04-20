@@ -37,6 +37,9 @@ public class UserServiceImpl implements UserService {
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
+        user.setFirstName(null);
+        user.setLastName(null);
+        user.setBirthDate(null);
         user.setPasswordHash(request.getPasswordHash());
         user.setActive(request.getActive());
 
@@ -124,6 +127,9 @@ public class UserServiceImpl implements UserService {
         response.setId(user.getId());
         response.setUsername(user.getUsername());
         response.setEmail(user.getEmail());
+        response.setFirstName(user.getFirstName());
+        response.setLastName(user.getLastName());
+        response.setBirthDate(user.getBirthDate());
         response.setActive(user.getActive());
         response.setRoles(user.getRoles().stream()
                 .map(Role::getName)

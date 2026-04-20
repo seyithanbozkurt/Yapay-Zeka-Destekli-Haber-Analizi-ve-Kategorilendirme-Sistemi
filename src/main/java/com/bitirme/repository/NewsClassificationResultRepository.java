@@ -2,8 +2,6 @@ package com.bitirme.repository;
 
 import com.bitirme.entity.NewsClassificationResult;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,8 +14,7 @@ public interface NewsClassificationResultRepository extends JpaRepository<NewsCl
     List<NewsClassificationResult> findByPredictedCategoryId(Integer categoryId);
     List<NewsClassificationResult> findByActiveTrue();
     
-    @Query("SELECT ncr FROM NewsClassificationResult ncr WHERE ncr.news.id = :newsId AND ncr.modelVersion.id = :modelVersionId")
-    Optional<NewsClassificationResult> findByNewsIdAndModelVersionId(@Param("newsId") Long newsId, @Param("modelVersionId") Integer modelVersionId);
+    Optional<NewsClassificationResult> findByNewsIdAndModelVersionId(Long newsId, Integer modelVersionId);
 }
 
 

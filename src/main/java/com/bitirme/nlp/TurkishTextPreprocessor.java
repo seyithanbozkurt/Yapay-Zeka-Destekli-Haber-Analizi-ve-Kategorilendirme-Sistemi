@@ -18,8 +18,8 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
- * Türkçe metin ön işleme: Lucene StandardTokenizer + küçük harf + Türkçe stop-word.
- * Zemberek opsiyonel; classpath'te yoksa bu Lucene tabanlı ön işleme kullanılır.
+ * Türkçe metin ön işleme: tokenization, küçük harfe dönüştürme, stop-word temizleme,
+ * noktalama temizleme. Lucene StandardTokenizer + Türkçe stop-word listesi.
  */
 @Component
 public class TurkishTextPreprocessor {
@@ -31,7 +31,18 @@ public class TurkishTextPreprocessor {
                     "veya", "ya", "hem", "ise", "ki", "ama", "fakat", "ancak", "lakin", "üzere", "sonra",
                     "önce", "şimdi", "bazı", "her", "tüm", "bütün", "diğer", "aynı", "kendi", "biz", "siz",
                     "onlar", "bu", "şu", "o", "ben", "sen", "hep", "hiç", "artık", "yine", "zaten", "hala",
-                    "henüz", "daha", "sadece", "yalnız", "belki", "galiba", "acaba", "tabii", "elbette"
+                    "henüz", "sadece", "yalnız", "belki", "galiba", "acaba", "tabii", "elbette",
+                    "etti", "eden", "erek", "olarak", "ettiği", "ettiğini", "edilen", "edilmesi",
+                    "olan", "oldu", "olduğu", "olduğunu", "olmak", "olması", "olmayan", "olmadan",
+                    "ile", "ilgili", "ise", "için", "kadar", "karşı", "göre", "rağmen", "beri",
+                    "üzere", "dolayı", "itibaren", "sonra", "önce", "birlikte", "boyunca", "doğru",
+                    "kendi", "şey", "şeyi", "şeyler", "şeyleri", "biri", "birisi", "birşey", "birkaç",
+                    "herhangi", "hiçbir", "birçok", "birçokları", "hepsi", "hepsini", "arada", "böyle",
+                    "şöyle", "öyle", "bazen", "çoğu", "çoğunda", "çoğundan", "çoğunun", "nerede",
+                    "nereye", "nereden", "kim", "kimi", "kime", "kimden", "kimin", "kimde", "kimde",
+                    "ne zaman", "hangi", "hangisi", "hangileri", "kaç", "kaçı", "kaçında", "nedir",
+                    "dir", "dır", "dur", "dür", "tür", "tur", "mi", "mı", "mu", "mü", "mıdır", "midir",
+                    "den", "dan", "ten", "tan", "nden", "ndan", "nden", "ndan", "den", "dan"
             ),
             true
     );
