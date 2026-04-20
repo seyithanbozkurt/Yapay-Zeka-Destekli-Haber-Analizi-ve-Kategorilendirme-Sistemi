@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchAllNews } from '../services/newsService'
 import type { News } from '../types/news'
 
 function NewsList() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [news, setNews] = useState<News[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [sourceFilter, setSourceFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') ?? '')
 
   useEffect(() => {
     let isMounted = true
@@ -38,8 +40,22 @@ function NewsList() {
     }
   }, [])
 
+  useEffect(() => {
+    setCategoryFilter(searchParams.get('category') ?? '')
+  }, [searchParams])
+
   const sources = useMemo(
     () => Array.from(new Set(news.map((n) => n.sourceName))).sort(),
+    [news],
+  )
+
+  const categories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          news.flatMap((n) => (Array.isArray(n.categoryNames) ? n.categoryNames : [])),
+        ),
+      ).sort(),
     [news],
   )
 
@@ -51,9 +67,11 @@ function NewsList() {
           n.title.toLowerCase().includes(search.toLowerCase()) ||
           n.content?.toLowerCase().includes(search.toLowerCase())
         const matchesSource = !sourceFilter || n.sourceName === sourceFilter
-        return matchesSearch && matchesSource
+        const matchesCategory =
+          !categoryFilter || (Array.isArray(n.categoryNames) && n.categoryNames.includes(categoryFilter))
+        return matchesSearch && matchesSource && matchesCategory
       }),
-    [news, search, sourceFilter],
+    [news, search, sourceFilter, categoryFilter],
   )
 
   return (
@@ -99,12 +117,41 @@ function NewsList() {
             ))}
           </select>
         </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-600" htmlFor="categoryFilter">
+            Kategori:
+          </label>
+          <select
+            id="categoryFilter"
+            value={categoryFilter}
+            onChange={(e) => {
+              const value = e.target.value
+              setCategoryFilter(value)
+              if (value) {
+                setSearchParams({ category: value })
+              } else {
+                setSearchParams({})
+              }
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          >
+            <option value="">Tümü</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Gorsel
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Başlık
               </th>
@@ -122,13 +169,13 @@ function NewsList() {
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-500 text-sm">
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-500 text-sm">
                   Haberler yükleniyor...
                 </td>
               </tr>
             ) : filteredNews.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-500 text-sm">
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-500 text-sm">
                   Gösterilecek haber bulunamadı.
                 </td>
               </tr>
@@ -139,6 +186,20 @@ function NewsList() {
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => navigate(`/news/${n.id}`)}
                 >
+                  <td className="px-4 py-3">
+                    <div className="h-14 w-20 rounded-md overflow-hidden bg-gray-100">
+                      {n.imageUrl ? (
+                        <img
+                          src={n.imageUrl}
+                          alt={n.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-r from-blue-100 to-indigo-100" />
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     <div className="font-medium line-clamp-2">{n.title}</div>
                     {n.originalUrl && (

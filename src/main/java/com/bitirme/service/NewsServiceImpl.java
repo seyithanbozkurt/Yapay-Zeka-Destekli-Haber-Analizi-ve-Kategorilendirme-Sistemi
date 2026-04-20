@@ -48,6 +48,7 @@ public class NewsServiceImpl implements NewsService {
         news.setNormalizedTitle(normalizedTitle);
         news.setContent(request.getContent());
         news.setOriginalUrl(request.getOriginalUrl());
+        news.setImageUrl(request.getImageUrl());
         news.setLanguage(request.getLanguage() != null ? request.getLanguage() : "tr");
         news.setPublishedAt(request.getPublishedAt());
         news.setProcessed(request.getProcessed() != null ? request.getProcessed() : false);
@@ -109,6 +110,10 @@ public class NewsServiceImpl implements NewsService {
         if (request.getOriginalUrl() != null) {
             news.setOriginalUrl(request.getOriginalUrl());
         }
+        
+        if (request.getImageUrl() != null) {
+            news.setImageUrl(request.getImageUrl());
+        }
 
         if (request.getLanguage() != null) {
             news.setLanguage(request.getLanguage());
@@ -156,6 +161,7 @@ public class NewsServiceImpl implements NewsService {
         response.setTitle(news.getTitle());
         response.setContent(news.getContent());
         response.setOriginalUrl(news.getOriginalUrl());
+        response.setImageUrl(news.getImageUrl());
         response.setLanguage(news.getLanguage());
         response.setPublishedAt(news.getPublishedAt());
         response.setProcessed(news.getProcessed());

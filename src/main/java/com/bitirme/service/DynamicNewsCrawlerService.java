@@ -290,6 +290,11 @@ public class DynamicNewsCrawlerService {
                         news.setTitle(title);
                         news.setContent(safeContent);
                         news.setOriginalUrl(link);
+                        String imageUrl = extractImageUrl(element, source);
+                        if (imageUrl == null || imageUrl.isBlank()) {
+                            imageUrl = extractImageFromArticlePage(link, source);
+                        }
+                        news.setImageUrl(imageUrl);
                         news.setExternalId(link);
                         news.setLanguage("tr");
                         news.setPublishedAt(LocalDateTime.now());
@@ -391,6 +396,36 @@ public class DynamicNewsCrawlerService {
 
             return 0;
         }
+    }
+
+    /**
+     * Eski kayıtlarda imageUrl boş olan haberlerin görsellerini doldurur.
+     */
+    @Transactional
+    public int backfillMissingImageUrls() {
+        List<News> candidates = newsRepository.findMissingImageUrlNews();
+        int updatedCount = 0;
+
+        for (News news : candidates) {
+            try {
+                Source source = news.getSource();
+                if (source == null || news.getOriginalUrl() == null || news.getOriginalUrl().isBlank()) {
+                    continue;
+                }
+
+                String imageUrl = extractImageFromArticlePage(news.getOriginalUrl(), source);
+                if (imageUrl != null && !imageUrl.isBlank()) {
+                    news.setImageUrl(imageUrl);
+                    newsRepository.save(news);
+                    updatedCount++;
+                }
+            } catch (Exception e) {
+                log.debug("Image backfill failed for news {}: {}", news.getId(), e.getMessage());
+            }
+        }
+
+        log.info("Image backfill completed. Updated {} / {} news records.", updatedCount, candidates.size());
+        return updatedCount;
     }
 
     private boolean isLowQuality(String title, String content) {
@@ -537,6 +572,109 @@ public class DynamicNewsCrawlerService {
 
         // Fallback
         return element.text().trim();
+    }
+    
+    private String extractImageUrl(Element element, Source source) {
+        String[] selectors = {
+                "img[src]",
+                "img[data-src]",
+                "img[data-original]",
+                "picture img[src]"
+        };
+
+        Element current = element;
+        int depth = 0;
+        while (current != null && depth < 4) {
+            for (String selector : selectors) {
+                Element img = current.selectFirst(selector);
+                if (img != null) {
+                    String url = null;
+                    if (img.hasAttr("src") && !img.attr("src").isBlank()) {
+                        url = img.attr("src");
+                    } else if (img.hasAttr("data-src") && !img.attr("data-src").isBlank()) {
+                        url = img.attr("data-src");
+                    } else if (img.hasAttr("data-original") && !img.attr("data-original").isBlank()) {
+                        url = img.attr("data-original");
+                    }
+
+                    if (url != null && !url.isBlank()) {
+                        return toAbsoluteUrl(url, source);
+                    }
+                }
+            }
+            current = current.parent();
+            depth++;
+        }
+
+        return null;
+    }
+    
+    /**
+     * Liste sayfasında görsel bulunamazsa, haber detay sayfasından og:image vb. meta etiketleri dener.
+     */
+    private String extractImageFromArticlePage(String articleUrl, Source source) {
+        if (articleUrl == null || articleUrl.isBlank()) {
+            return null;
+        }
+
+        try {
+            Document articleDoc = Jsoup.connect(articleUrl)
+                    .userAgent(getRandomUserAgent())
+                    .timeout(15000)
+                    .followRedirects(true)
+                    .maxBodySize(0)
+                    .get();
+
+            String ogImage = getMetaContent(articleDoc, "meta[property=og:image]", "content");
+            if (ogImage != null && !ogImage.isBlank()) {
+                return toAbsoluteUrl(ogImage, source);
+            }
+
+            String twitterImage = getMetaContent(articleDoc, "meta[name=twitter:image]", "content");
+            if (twitterImage != null && !twitterImage.isBlank()) {
+                return toAbsoluteUrl(twitterImage, source);
+            }
+
+            String imageSrc = getMetaContent(articleDoc, "link[rel=image_src]", "href");
+            if (imageSrc != null && !imageSrc.isBlank()) {
+                return toAbsoluteUrl(imageSrc, source);
+            }
+
+            Element firstImage = articleDoc.selectFirst(
+                    "article img[src], .news-detail img[src], .article-body img[src], img[src]"
+            );
+            if (firstImage != null) {
+                String src = firstImage.attr("src");
+                if (src != null && !src.isBlank()) {
+                    return toAbsoluteUrl(src, source);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not fetch article image from {}: {}", articleUrl, e.getMessage());
+        }
+
+        return null;
+    }
+    
+    private String getMetaContent(Document doc, String selector, String attrName) {
+        Element element = doc.selectFirst(selector);
+        if (element == null) return null;
+        String value = element.attr(attrName);
+        return (value == null || value.isBlank()) ? null : value.trim();
+    }
+    
+    private String toAbsoluteUrl(String url, Source source) {
+        String trimmed = url.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            return trimmed;
+        }
+        if (trimmed.startsWith("//")) {
+            return "https:" + trimmed;
+        }
+        if (trimmed.startsWith("/")) {
+            return source.getBaseUrl() + trimmed;
+        }
+        return source.getBaseUrl() + "/" + trimmed;
     }
 
     private String getRandomUserAgent() {

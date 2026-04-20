@@ -27,4 +27,9 @@ public class NewsCrawlerService {
     public int crawlBreakingNews() {
         return dynamicNewsCrawlerService.crawlBreakingNews();
     }
+
+    @Transactional
+    public int backfillMissingImageUrls() {
+        return dynamicNewsCrawlerService.backfillMissingImageUrls();
+    }
 }

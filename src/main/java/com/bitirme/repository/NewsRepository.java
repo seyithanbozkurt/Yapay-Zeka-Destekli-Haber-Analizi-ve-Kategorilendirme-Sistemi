@@ -29,6 +29,10 @@ public interface NewsRepository extends JpaRepository<News, Long> {
 
     /** normalized_title boş olan haberler (backfill için). */
     List<News> findByNormalizedTitleIsNull();
+
+    /** image_url boş olan ve URL'si bulunan haberler (görsel backfill için). */
+    @Query("SELECT n FROM News n WHERE (n.imageUrl IS NULL OR n.imageUrl = '') AND n.originalUrl IS NOT NULL AND n.originalUrl <> ''")
+    List<News> findMissingImageUrlNews();
 }
 
 

@@ -6,3 +6,19 @@ export async function createFeedback(payload: UserFeedbackCreateRequest) {
   return data
 }
 
+export interface UserFeedbackResponse {
+  id: number
+  newsTitle: string
+  username: string
+  modelVersionName?: string
+  currentPredictedCategoryName?: string
+  userSelectedCategoryName: string
+  feedbackType: string
+  comment?: string
+}
+
+export async function fetchAllFeedbacks(): Promise<UserFeedbackResponse[]> {
+  const { data } = await api.get<UserFeedbackResponse[]>('/user-feedback')
+  return Array.isArray(data) ? data : []
+}
+
