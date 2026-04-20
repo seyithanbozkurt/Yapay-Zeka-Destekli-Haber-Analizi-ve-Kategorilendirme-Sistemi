@@ -94,10 +94,26 @@ function Home() {
               <Link
                 key={item.id}
                 to={`/news/${item.id}`}
-                className="min-w-[300px] bg-gray-50 border border-gray-200 rounded-xl p-4 hover:bg-gray-100 transition-colors"
+                className="min-w-[300px] bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:bg-gray-100 transition-colors"
               >
-                <p className="text-xs text-blue-700 font-medium">{item.sourceName}</p>
-                <p className="mt-1 text-sm font-semibold text-gray-900 line-clamp-2">{item.title}</p>
+                <div className="h-36 bg-gray-100">
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-r from-blue-100 to-indigo-100 grid place-items-center text-sm text-gray-600">
+                      Haber gorseli
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <p className="text-xs text-blue-700 font-medium">{item.sourceName}</p>
+                  <p className="mt-1 text-sm font-semibold text-gray-900 line-clamp-2">{item.title}</p>
+                </div>
               </Link>
             ))}
           </div>
@@ -113,8 +129,19 @@ function Home() {
               to={`/news/${item.id}`}
               className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
             >
-              <div className="h-36 bg-gradient-to-r from-blue-100 to-indigo-100 grid place-items-center text-sm text-gray-600">
-                Haber görsel alanı
+              <div className="h-36 bg-gray-100">
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-blue-100 to-indigo-100 grid place-items-center text-sm text-gray-600">
+                    Haber gorseli
+                  </div>
+                )}
               </div>
               <div className="p-4">
                 <p className="text-xs text-gray-500">{item.sourceName}</p>

@@ -35,6 +35,10 @@ public class NewsCreateRequest {
     @Schema(description = "Orijinal haber URL'i", example = "https://www.hurriyet.com.tr/ekonomi/haber")
     private String originalUrl;
     
+    @Size(max = 1000, message = "Gorsel URL en fazla 1000 karakter olabilir")
+    @Schema(description = "Haber gorsel URL'i", example = "https://site.com/images/haber.jpg")
+    private String imageUrl;
+    
     @Size(max = 10, message = "Dil kodu en fazla 10 karakter olabilir")
     @Schema(description = "Haber dili", example = "tr")
     private String language = "tr";

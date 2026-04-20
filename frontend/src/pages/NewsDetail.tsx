@@ -136,6 +136,16 @@ function NewsDetail() {
       {!loading && news && (
         <div className="space-y-4">
           <div className="bg-white rounded-xl shadow p-6">
+            {news.imageUrl && (
+              <div className="mb-4 rounded-xl overflow-hidden bg-gray-100">
+                <img
+                  src={news.imageUrl}
+                  alt={news.title}
+                  className="w-full h-72 object-cover"
+                  loading="lazy"
+                />
+              </div>
+            )}
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-wide text-gray-500">

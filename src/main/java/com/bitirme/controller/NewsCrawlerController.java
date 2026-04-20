@@ -64,5 +64,13 @@ public class NewsCrawlerController {
         return ResponseEntity.ok(ApiResponse.success("Son dakika haber çekme işlemi tamamlandı", 
                 Map.of("count", count)));
     }
+
+    @PostMapping("/backfill-images")
+    @Operation(summary = "Eski haber görsellerini doldur", description = "imageUrl alanı boş olan haberlerde görsel URL backfill işlemi yapar")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> backfillImages() {
+        int count = newsCrawlerService.backfillMissingImageUrls();
+        return ResponseEntity.ok(ApiResponse.success("Haber görsel backfill işlemi tamamlandı",
+                Map.of("updatedCount", count)));
+    }
 }
 
