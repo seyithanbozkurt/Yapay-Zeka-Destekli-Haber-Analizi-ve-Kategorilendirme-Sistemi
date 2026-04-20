@@ -70,15 +70,16 @@ class NewsClassificationServiceUnitTest {
         assertThat(cat).isEqualTo("Spor");
     }
     @Test
-    @DisplayName("beyaz kutu: Turizm kritik başlık sinyalleri fallback'e gitmeden Turizm döner")
+    @DisplayName("predictCategoryKeywordOnly Turizm kritik başlık sinyalleri fallback'e gitmeden Turizm döner")
     void predictTurizmTest() {
         String cat = newsClassificationService.predictCategoryKeywordOnly(
                 "Otel rezervasyon sayıları arttı",
                 "Borsa, dolar ve faiz konuşulsa da turizm haberi."
         );
 
-        assertThat(cat).isEqualTo("Turizm");
         verifyNoInteractions(categoryRepository);
+        assertThat(cat).isEqualTo("Turizm");
+
     }
 
     @Test
