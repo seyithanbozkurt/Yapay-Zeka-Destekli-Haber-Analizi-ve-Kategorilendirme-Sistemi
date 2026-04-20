@@ -59,6 +59,13 @@ public class NewsClassificationResultController {
         newsClassificationResultService.delete(id);
         return ResponseEntity.noContent().build();
     }
+    
+    @GetMapping("/by-news/{newsId}")
+    @Operation(summary = "Habere göre sınıflandırma sonuçlarını listele", description = "Verilen haber ID'sine ait tüm sınıflandırma sonuçlarını döner")
+    public ResponseEntity<List<NewsClassificationResultResponse>> getByNewsId(@PathVariable Long newsId) {
+        List<NewsClassificationResultResponse> responses = newsClassificationResultService.getByNewsId(newsId);
+        return ResponseEntity.ok(responses);
+    }
 
     @PostMapping("/backfill-news-categories")
     @Operation(summary = "Mevcut sınıflandırma sonuçlarından news_categories tablosunu doldur")

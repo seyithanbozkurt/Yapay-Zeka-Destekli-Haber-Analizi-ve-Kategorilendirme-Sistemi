@@ -32,12 +32,12 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
 
     @Override
     @Transactional
-    public UserFeedBackResponse create(UserFeedBackCreateRequest request) {
+    public UserFeedBackResponse create(UserFeedBackCreateRequest request, String username) {
         News news = newsRepository.findById(request.getNewsId())
                 .orElseThrow(() -> new NotFoundException("Haber bulunamadı: " + request.getNewsId()));
 
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + request.getUserId()));
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + username));
 
         UserFeedBack feedback = new UserFeedBack();
         feedback.setNews(news);

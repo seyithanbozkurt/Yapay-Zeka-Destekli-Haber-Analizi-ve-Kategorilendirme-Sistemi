@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,8 +31,9 @@ public class UserFeedBackController {
             @ApiResponse(responseCode = "400", description = "Geçersiz istek"),
             @ApiResponse(responseCode = "404", description = "Haber, kullanıcı, model versiyonu veya kategori bulunamadı")
     })
-    public ResponseEntity<UserFeedBackResponse> create(@RequestBody UserFeedBackCreateRequest request) {
-        UserFeedBackResponse response = userFeedBackService.create(request);
+    public ResponseEntity<UserFeedBackResponse> create(@RequestBody UserFeedBackCreateRequest request, Authentication authentication) {
+        String username = authentication.getName();
+        UserFeedBackResponse response = userFeedBackService.create(request, username);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

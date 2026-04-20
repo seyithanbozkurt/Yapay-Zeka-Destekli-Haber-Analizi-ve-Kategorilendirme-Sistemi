@@ -104,6 +104,14 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
         }
         newsClassificationResultRepository.deleteById(id);
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<NewsClassificationResultResponse> getByNewsId(Long newsId) {
+        return newsClassificationResultRepository.findByNewsId(newsId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
 
     /**
      * Mevcut sınıflandırma sonuçlarından yola çıkarak news_categories join tablosunu doldurur.
