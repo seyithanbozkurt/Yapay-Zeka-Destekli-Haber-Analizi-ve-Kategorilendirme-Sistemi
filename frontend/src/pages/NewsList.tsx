@@ -1,17 +1,83 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { fetchAllNews } from '../services/newsService'
+import { fetchNewsPage } from '../services/newsService'
 import type { News } from '../types/news'
+import { fetchAllCategories } from '../services/categoryService'
+import { api } from '../services/api'
+
+interface SourceItem {
+  id: number
+  name: string
+}
 
 function NewsList() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [sources, setSources] = useState<string[]>([])
+  const [categories, setCategories] = useState<string[]>([])
   const [news, setNews] = useState<News[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [search, setSearch] = useState('')
-  const [sourceFilter, setSourceFilter] = useState('')
+  const [page, setPage] = useState(Math.max(Number(searchParams.get('page') ?? '1') - 1, 0))
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalElements, setTotalElements] = useState(0)
+  const PAGE_SIZE = 20
+  const [jumpPage, setJumpPage] = useState('')
+  const [search, setSearch] = useState(searchParams.get('search') ?? '')
+  const [sourceFilter, setSourceFilter] = useState(searchParams.get('source') ?? '')
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') ?? '')
+
+  useEffect(() => {
+    const nextPage = Math.max(Number(searchParams.get('page') ?? '1') - 1, 0)
+    const nextSearch = searchParams.get('search') ?? ''
+    const nextSource = searchParams.get('source') ?? ''
+    const nextCategory = searchParams.get('category') ?? ''
+
+    setPage((prev) => (prev === nextPage ? prev : nextPage))
+    setSearch((prev) => (prev === nextSearch ? prev : nextSearch))
+    setSourceFilter((prev) => (prev === nextSource ? prev : nextSource))
+    setCategoryFilter((prev) => (prev === nextCategory ? prev : nextCategory))
+  }, [searchParams])
+
+  const updateQueryParams = (next: {
+    page?: number
+    search?: string
+    source?: string
+    category?: string
+  }) => {
+    const nextPage = next.page ?? page
+    const nextSearch = next.search ?? search
+    const nextSource = next.source ?? sourceFilter
+    const nextCategory = next.category ?? categoryFilter
+    const params = new URLSearchParams()
+
+    params.set('page', String(nextPage + 1))
+    if (nextSearch.trim()) params.set('search', nextSearch.trim())
+    if (nextSource) params.set('source', nextSource)
+    if (nextCategory) params.set('category', nextCategory)
+
+    setSearchParams(params, { replace: true })
+  }
+
+  useEffect(() => {
+    let isMounted = true
+    const loadFilterData = async () => {
+      try {
+        const [sourceRes, categoryRes] = await Promise.all([api.get<SourceItem[]>('/sources'), fetchAllCategories()])
+        if (!isMounted) return
+        setSources(Array.isArray(sourceRes.data) ? sourceRes.data.map((s) => s.name) : [])
+        setCategories(Array.isArray(categoryRes) ? categoryRes.map((c) => c.name) : [])
+      } catch {
+        if (!isMounted) return
+        setSources([])
+        setCategories([])
+      }
+    }
+    loadFilterData()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -20,9 +86,15 @@ function NewsList() {
       try {
         setLoading(true)
         setError('')
-        const data = await fetchAllNews()
+        const pageData = await fetchNewsPage(page, PAGE_SIZE, {
+          search,
+          sourceName: sourceFilter,
+          categoryName: categoryFilter,
+        })
         if (!isMounted) return
-        setNews(data)
+        setNews(pageData.content ?? [])
+        setTotalPages(pageData.totalPages ?? 0)
+        setTotalElements(pageData.totalElements ?? 0)
       } catch (e) {
         if (!isMounted) return
         setError('Haberler yüklenemedi. Lütfen daha sonra tekrar deneyin.')
@@ -38,40 +110,20 @@ function NewsList() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [page, search, sourceFilter, categoryFilter])
 
-  useEffect(() => {
-    setCategoryFilter(searchParams.get('category') ?? '')
-  }, [searchParams])
-
-  const sources = useMemo(
-    () => Array.from(new Set(news.map((n) => n.sourceName))).sort(),
-    [news],
+  const pageNumbers = useMemo(
+    () => Array.from({ length: totalPages }, (_, i) => i + 1),
+    [totalPages],
   )
 
-  const categories = useMemo(
+  const visiblePageButtons = useMemo(
     () =>
-      Array.from(
-        new Set(
-          news.flatMap((n) => (Array.isArray(n.categoryNames) ? n.categoryNames : [])),
-        ),
-      ).sort(),
-    [news],
-  )
-
-  const filteredNews = useMemo(
-    () =>
-      news.filter((n) => {
-        const matchesSearch =
-          !search ||
-          n.title.toLowerCase().includes(search.toLowerCase()) ||
-          n.content?.toLowerCase().includes(search.toLowerCase())
-        const matchesSource = !sourceFilter || n.sourceName === sourceFilter
-        const matchesCategory =
-          !categoryFilter || (Array.isArray(n.categoryNames) && n.categoryNames.includes(categoryFilter))
-        return matchesSearch && matchesSource && matchesCategory
-      }),
-    [news, search, sourceFilter, categoryFilter],
+      pageNumbers.slice(
+        Math.max(page + 1 - 2, 1) - 1,
+        Math.min(page + 1 + 2, totalPages),
+      ),
+    [pageNumbers, page, totalPages],
   )
 
   return (
@@ -94,7 +146,12 @@ function NewsList() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value
+              setSearch(value)
+              setPage(0)
+              updateQueryParams({ search: value, page: 0 })
+            }}
             placeholder="Başlık veya içerikte ara..."
             className="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white"
           />
@@ -106,7 +163,12 @@ function NewsList() {
           <select
             id="sourceFilter"
             value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value
+              setSourceFilter(value)
+              setPage(0)
+              updateQueryParams({ source: value, page: 0 })
+            }}
             className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
             <option value="">Tümü</option>
@@ -127,11 +189,8 @@ function NewsList() {
             onChange={(e) => {
               const value = e.target.value
               setCategoryFilter(value)
-              if (value) {
-                setSearchParams({ category: value })
-              } else {
-                setSearchParams({})
-              }
+              setPage(0)
+              updateQueryParams({ category: value, page: 0 })
             }}
             className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
@@ -173,14 +232,14 @@ function NewsList() {
                   Haberler yükleniyor...
                 </td>
               </tr>
-            ) : filteredNews.length === 0 ? (
+            ) : news.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-gray-500 text-sm">
                   Gösterilecek haber bulunamadı.
                 </td>
               </tr>
             ) : (
-              filteredNews.map((n) => (
+              news.map((n) => (
                 <tr
                   key={n.id}
                   className="hover:bg-gray-50 cursor-pointer"
@@ -230,6 +289,105 @@ function NewsList() {
           </tbody>
         </table>
       </div>
+
+      {!loading && totalPages > 1 && (
+        <div className="mt-4 bg-white rounded-xl shadow p-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-gray-600">
+            Toplam {totalElements} haber • Sayfa {page + 1} / {totalPages}
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const nextPage = Math.max(page - 1, 0)
+                setPage(nextPage)
+                updateQueryParams({ page: nextPage })
+              }}
+              disabled={page === 0}
+              className="px-3 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              Onceki
+            </button>
+
+            {visiblePageButtons.map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  onClick={() => {
+                    const nextPage = pageNumber - 1
+                    setPage(nextPage)
+                    updateQueryParams({ page: nextPage })
+                  }}
+                  className={`px-3 py-2 rounded-lg border text-sm ${
+                    pageNumber - 1 === page
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+
+            <button
+              type="button"
+              onClick={() => {
+                const nextPage = Math.min(page + 1, totalPages - 1)
+                setPage(nextPage)
+                updateQueryParams({ page: nextPage })
+              }}
+              disabled={page >= totalPages - 1}
+              className="px-3 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              Sonraki
+            </button>
+
+            <select
+              value={page + 1}
+              onChange={(e) => {
+                const nextPage = Number(e.target.value) - 1
+                setPage(nextPage)
+                updateQueryParams({ page: nextPage })
+              }}
+              className="ml-2 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white max-h-44 overflow-y-auto"
+              title="Sayfa sec"
+            >
+              {pageNumbers.map((p) => (
+                <option key={p} value={p}>
+                  Sayfa {p}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex items-center gap-1 ml-2">
+              <input
+                type="number"
+                min={1}
+                max={Math.max(totalPages, 1)}
+                value={jumpPage}
+                onChange={(e) => setJumpPage(e.target.value)}
+                placeholder="Git"
+                className="w-16 px-2 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const target = Number(jumpPage)
+                  if (!Number.isFinite(target)) return
+                  if (target < 1 || target > totalPages) return
+                  const nextPage = target - 1
+                  setPage(nextPage)
+                  updateQueryParams({ page: nextPage })
+                  setJumpPage('')
+                }}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-100"
+              >
+                Git
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

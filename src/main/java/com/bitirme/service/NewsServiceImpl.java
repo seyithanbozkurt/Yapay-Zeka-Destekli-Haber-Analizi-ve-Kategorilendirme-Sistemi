@@ -13,6 +13,10 @@ import com.bitirme.repository.SourceRepository;
 import com.bitirme.util.NewsTitleNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,6 +84,25 @@ public class NewsServiceImpl implements NewsService {
         return newsRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NewsResponse> getPage(int page, int size, String search, String sourceName, String categoryName) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.max(Math.min(size, 100), 1);
+        Pageable pageable = PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"))
+        );
+        String safeSearch = (search == null || search.isBlank()) ? null : search.trim();
+        String safeSourceName = (sourceName == null || sourceName.isBlank()) ? null : sourceName.trim();
+        String safeCategoryName = (categoryName == null || categoryName.isBlank()) ? null : categoryName.trim();
+
+        return newsRepository
+                .findPageWithFilters(safeSearch, safeSourceName, safeCategoryName, pageable)
+                .map(this::toResponse);
     }
 
     @Override
