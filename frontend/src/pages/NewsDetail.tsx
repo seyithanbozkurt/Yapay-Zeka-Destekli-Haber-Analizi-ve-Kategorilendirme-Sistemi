@@ -98,7 +98,15 @@ function NewsDetail() {
       setFeedbackMessage('Geri bildiriminiz başarıyla kaydedildi.')
       setComment('')
     } catch (e) {
-      setFeedbackError('Geri bildirim gönderilemedi. Lütfen tekrar deneyin.')
+      const message =
+        typeof e === 'object' &&
+        e !== null &&
+        'response' in e &&
+        typeof (e as { response?: { data?: { message?: string } } }).response?.data?.message ===
+          'string'
+          ? (e as { response?: { data?: { message?: string } } }).response!.data!.message!
+          : 'Geri bildirim gönderilemedi. Lütfen tekrar deneyin.'
+      setFeedbackError(message)
     } finally {
       setFeedbackLoading(false)
     }
