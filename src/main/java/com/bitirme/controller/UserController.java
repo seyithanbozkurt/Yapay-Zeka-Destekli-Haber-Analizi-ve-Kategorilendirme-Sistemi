@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -52,6 +53,17 @@ public class UserController {
     public ResponseEntity<List<UserResponse>> getAll() {
         List<UserResponse> responses = userService.getAll();
         return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Giriş yapan kullanıcıyı getir", description = "JWT içindeki kullanıcı adına göre profil bilgilerini getirir")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profil bilgisi getirildi"),
+            @ApiResponse(responseCode = "404", description = "Kullanıcı bulunamadı")
+    })
+    public ResponseEntity<UserResponse> getMe(Authentication authentication) {
+        UserResponse response = userService.getByUsername(authentication.getName());
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping

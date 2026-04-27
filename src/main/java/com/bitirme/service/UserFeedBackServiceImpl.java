@@ -8,6 +8,7 @@ import com.bitirme.entity.ModelVersion;
 import com.bitirme.entity.News;
 import com.bitirme.entity.User;
 import com.bitirme.entity.UserFeedBack;
+import com.bitirme.exception.BusinessException;
 import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.CategoryRepository;
 import com.bitirme.repository.ModelVersionRepository;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -38,6 +40,13 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + username));
+
+        if (user.getBirthDate() == null) {
+            throw new BusinessException("Geri bildirim için doğum tarihi bilgisi zorunludur.");
+        }
+        if (user.getBirthDate().plusYears(18).isAfter(LocalDate.now())) {
+            throw new BusinessException("Geri bildirim göndermek için 18 yaşından büyük olmalısınız.");
+        }
 
         UserFeedBack feedback = new UserFeedBack();
         feedback.setNews(news);
