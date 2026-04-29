@@ -289,7 +289,7 @@ public class NewsClassificationService {
             return null;
         }
 
-        // Tek ama çok güçlü adli/vaka sinyali varsa Asayiş'e zorla
+        // adli/vaka sinyali varsa Asayiş'e sınıflandır
         boolean strongAsayisTitle =
                 titleNorm.contains("bıçaklı saldırı") ||
                 titleNorm.contains("silahlı saldırı") ||

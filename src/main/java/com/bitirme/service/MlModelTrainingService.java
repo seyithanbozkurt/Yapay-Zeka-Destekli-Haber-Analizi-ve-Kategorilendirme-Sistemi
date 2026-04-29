@@ -343,6 +343,48 @@ public class MlModelTrainingService {
         return last;
     }
 
+    /** İzole Spark child JVM: önce {@code ml.classifier.antlr493-jar-path}, yoksa ~/.m2 altındaki 4.9.3 jar. */
+    private Path resolveAntlr493JarPathForIsolatedSpark() {
+        String configured = mlProperties.getAntlr493JarPath();
+        if (configured != null && !configured.isBlank()) {
+            Path p = Path.of(configured.trim());
+            if (Files.exists(p)) {
+                return p.toAbsolutePath();
+            }
+        }
+        Path m2 = Path.of(
+                System.getProperty("user.home"),
+                ".m2",
+                "repository",
+                "org",
+                "antlr",
+                "antlr4-runtime",
+                "4.9.3",
+                "antlr4-runtime-4.9.3.jar"
+        );
+        if (Files.exists(m2)) {
+            return m2.toAbsolutePath();
+        }
+        return null;
+    }
+
+    private String describeAntlr493Lookup() {
+        String configured = mlProperties.getAntlr493JarPath();
+        Path m2 = Path.of(
+                System.getProperty("user.home"),
+                ".m2",
+                "repository",
+                "org",
+                "antlr",
+                "antlr4-runtime",
+                "4.9.3",
+                "antlr4-runtime-4.9.3.jar"
+        );
+        return "ml.classifier.antlr493-jar-path="
+                + (configured != null && !configured.isBlank() ? configured : "(bos)")
+                + "; m2.yolu=" + m2.toAbsolutePath();
+    }
+
     private SparkIsolatedTrainResult tryRunSparkStandaloneWithAntlrIsolation() {
         try {
             String cp = System.getProperty("java.class.path");
@@ -358,19 +400,12 @@ public class MlModelTrainingService {
                 filtered.add(entry);
             }
 
-            Path antlr493 = Path.of(
-                    System.getProperty("user.home"),
-                    ".m2",
-                    "repository",
-                    "org",
-                    "antlr",
-                    "antlr4-runtime",
-                    "4.9.3",
-                    "antlr4-runtime-4.9.3.jar"
-            );
-            if (!Files.exists(antlr493)) {
+            Path antlr493 = resolveAntlr493JarPathForIsolatedSpark();
+            if (antlr493 == null || !Files.exists(antlr493)) {
                 return new SparkIsolatedTrainResult(false, 0, null, null,
-                        "antlr4-runtime 4.9.3 jar bulunamadı: " + antlr493);
+                        "antlr4-runtime 4.9.3 jar bulunamadı. ml.classifier.antlr493-jar-path veya "
+                                + "ML_CLASSIFIER_ANTLR493_JAR ile tam yol verin (Docker: /app/deps/antlr4-runtime-4.9.3.jar). "
+                                + "Denenen: " + describeAntlr493Lookup());
             }
             filtered.add(antlr493.toAbsolutePath().toString());
 
