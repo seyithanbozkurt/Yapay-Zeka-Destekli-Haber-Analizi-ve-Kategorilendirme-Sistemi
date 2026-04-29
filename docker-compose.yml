@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: .
+    container_name: haber-backend
+    environment:
+      # Docker içindeki uygulama host makinedeki PostgreSQL'e bağlanır.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/haberdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: bulunmaz3457
+      # Spark (Java 21): SecurityManager uyumu; konteyner icinde makul heap
+      JAVA_TOOL_OPTIONS: "-Djava.security.manager=allow -XX:+UseContainerSupport -Xmx2048m"
+      # Izole Spark egitimi: imajdaki antlr4-runtime-4.9.3.jar (Dockerfile ile /app/deps altinda)
+      ML_CLASSIFIER_ANTLR493_JAR: /app/deps/antlr4-runtime-4.9.3.jar
+    volumes:
+      # Egitilen Spark modeli (pipeline + labels.txt) konteyner yenilense de kalsin
+      - ./data/ml-model:/app/data/ml-model
+    ports:
+      - "8989:8989"
+    restart: unless-stopped

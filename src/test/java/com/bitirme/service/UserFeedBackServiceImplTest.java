@@ -48,7 +48,7 @@ class UserFeedBackServiceImplTest {
         UserFeedBackCreateRequest req = buildRequest();
         when(newsRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.create(req))
+        assertThatThrownBy(() -> service.create(req,"metehan"))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -72,7 +72,7 @@ class UserFeedBackServiceImplTest {
             return f;
         });
 
-        service.create(req);
+        service.create(req,"metehan");
 
         verify(userFeedBackRepository).save(any(UserFeedBack.class));
     }
@@ -80,7 +80,6 @@ class UserFeedBackServiceImplTest {
     private static UserFeedBackCreateRequest buildRequest() {
         UserFeedBackCreateRequest r = new UserFeedBackCreateRequest();
         r.setNewsId(1L);
-        r.setUserId(2L);
         r.setUserSelectedCategoryId(3);
         r.setFeedbackType("NEGATIVE");
         return r;

@@ -7,7 +7,11 @@ import com.bitirme.nlp.SparkNewsClassifier;
 import com.bitirme.nlp.SparkNewsClassifierTrainer;
 import com.bitirme.nlp.config.MlClassifierProperties;
 import com.bitirme.service.MlModelTrainingService;
+import com.bitirme.service.MlTrainingDataSeedService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +39,54 @@ public class MlClassifierController {
     private final Optional<SparkNewsClassifier> sparkClassifier;
     private final Optional<NaiveBayesNewsClassifier> naiveBayesClassifier;
     private final MlModelTrainingService mlModelTrainingService;
+    private final MlTrainingDataSeedService mlTrainingDataSeedService;
+
+    @PostMapping("/seed-and-train")
+    @Tag(name = "YZ-AI: Tohumlama ve eğitim", description = "Dengeli eğitim verisi üretimi ve model eğitimi (Swagger’da arayın: seed veya mlSeedAndTrain)")
+    @Operation(
+            operationId = "mlSeedAndTrain",
+            summary = "Dengeli yapay zeka eğitim verisi + tam eğitim",
+            description = "Her aktif kategoride yeterli aktif etiket yoksa sentetik haber ekler (ml.classifier.min-training-samples, app.ml.seed.min-per-category), "
+                    + "ardından POST /api/ml/train ile aynı tam eğitimi senkron çalıştırır ve Spark modelini diske yükler. İstek gövdesi gerekmez."
+    )
+    @RequestBody(required = false, content = @Content())
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Tohumlama ve eğitim tamam; yanıt gövdesinde trainingData, sparkModelLoaded vb."
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Hata; data içinde 'error' anahtarı (ör. kategori veya model_versions yok)"
+            )
+    })
+    public ResponseEntity<ApiResponse<Map<String, Object>>> seedAndTrain() {
+        Map<String, Object> data = mlTrainingDataSeedService.seedBalancedLabelsAndTrainSync();
+        if (data == null) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("error", "Servis yanıtı null.");
+            return badRequestWithError(err);
+        }
+        if (data.containsKey("error")) {
+            return badRequestWithError(data);
+        }
+        return ResponseEntity.ok(ApiResponse.success(
+                "Dengeli eğitim verisi hazırlandı ve model eğitimi tamamlandı.",
+                data
+        ));
+    }
+
+    private static ResponseEntity<ApiResponse<Map<String, Object>>> badRequestWithError(Map<String, Object> data) {
+        Object msg = data.get("error");
+        return ResponseEntity.badRequest().body(
+                ApiResponse.<Map<String, Object>>builder()
+                        .success(false)
+                        .message(msg != null ? String.valueOf(msg) : "İşlem başarısız")
+                        .data(data)
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+    }
 
     @PostMapping("/train")
     @Operation(

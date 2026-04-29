@@ -35,6 +35,12 @@ public class MlClassifierProperties {
     private long sparkIsolatedTrainTimeoutMs = 600_000L;
 
     /**
+     * İzole Spark child JVM classpath'ine eklenecek {@code antlr4-runtime-4.9.3.jar} dosyasının tam yolu.
+     * Boşsa {@code ~/.m2/repository/org/antlr/antlr4-runtime/4.9.3/} denenir (Docker'da imaj içi {@code /app/deps/...} verin).
+     */
+    private String antlr493JarPath = "";
+
+    /**
      * true: POST /api/ml/train hemen döner, eğitim arka planda (Swagger takılmaz). Sonuç: GET /api/ml/train/last veya log.
      * false: Eski davranış — yanıt tüm eğitim bitene kadar bekler.
      */
