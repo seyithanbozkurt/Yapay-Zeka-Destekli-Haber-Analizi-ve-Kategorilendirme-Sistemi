@@ -1,6 +1,7 @@
 package com.bitirme.service;
 
 import com.bitirme.dto.auth.AuthResponse;
+import com.bitirme.dto.auth.ChangePasswordRequest;
 import com.bitirme.dto.auth.LoginRequest;
 import com.bitirme.dto.auth.RegisterRequest;
 import com.bitirme.entity.Role;
@@ -18,6 +19,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 
@@ -96,6 +98,23 @@ public class AuthService {
             candidate = baseUsername + suffix++;
         }
         return candidate;
+    }
+
+    @Transactional
+    public void changePassword(String username, ChangePasswordRequest request) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + username));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new UnauthorizedException("Mevcut şifre hatalı");
+        }
+
+        if (request.getCurrentPassword().equals(request.getNewPassword())) {
+            throw new IllegalArgumentException("Yeni şifre mevcut şifre ile aynı olamaz");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }
 

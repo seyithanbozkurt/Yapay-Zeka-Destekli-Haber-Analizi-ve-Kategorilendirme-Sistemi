@@ -1,10 +1,15 @@
 import axios from 'axios'
-import type {
-  ApiResponse,
-  AuthResponse,
-  LoginRequest,
-  RegisterRequest,
-} from '../types/auth'
+import { api } from './api'
+import type { ApiResponse, AuthResponse, LoginRequest, RegisterRequest } from '../types/auth'
+
+interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
+export async function changePassword(payload: ChangePasswordRequest): Promise<void> {
+  await api.post<ApiResponse<null>>('/auth/change-password', payload)
+}
 
 const publicApi = axios.create({
   baseURL: '/api',

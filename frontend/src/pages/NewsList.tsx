@@ -4,6 +4,7 @@ import { fetchNewsPage } from '../services/newsService'
 import type { News } from '../types/news'
 import { fetchAllCategories } from '../services/categoryService'
 import { api } from '../services/api'
+import { useTheme } from '../context/ThemeContext'
 
 interface SourceItem {
   id: number
@@ -11,6 +12,8 @@ interface SourceItem {
 }
 
 function NewsList() {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [sources, setSources] = useState<string[]>([])
@@ -127,10 +130,10 @@ function NewsList() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className={`min-h-screen p-6 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-gray-50'}`}>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Haberler</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Haberler</h1>
+        <p className={`text-sm mt-1 ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
           Sistemde bulunan haberleri listeleyin, arayın ve filtreleyin.
         </p>
       </div>
@@ -153,11 +156,13 @@ function NewsList() {
               updateQueryParams({ search: value, page: 0 })
             }}
             placeholder="Başlık veya içerikte ara..."
-            className="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white"
+            className={`w-full max-w-md px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition ${
+              isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-gray-300 bg-white'
+            }`}
           />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600" htmlFor="sourceFilter">
+          <label className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`} htmlFor="sourceFilter">
             Kaynak:
           </label>
           <select
@@ -169,7 +174,9 @@ function NewsList() {
               setPage(0)
               updateQueryParams({ source: value, page: 0 })
             }}
-            className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className={`px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+              isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-gray-300 bg-white'
+            }`}
           >
             <option value="">Tümü</option>
             {sources.map((s) => (
@@ -180,7 +187,7 @@ function NewsList() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600" htmlFor="categoryFilter">
+          <label className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`} htmlFor="categoryFilter">
             Kategori:
           </label>
           <select
@@ -192,7 +199,9 @@ function NewsList() {
               setPage(0)
               updateQueryParams({ category: value, page: 0 })
             }}
-            className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            className={`px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+              isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-gray-300 bg-white'
+            }`}
           >
             <option value="">Tümü</option>
             {categories.map((c) => (
@@ -204,37 +213,37 @@ function NewsList() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className={`rounded-xl shadow overflow-hidden ${isDark ? 'bg-slate-900 border border-slate-700' : 'bg-white'}`}>
+        <table className={`min-w-full ${isDark ? 'divide-y divide-slate-700' : 'divide-y divide-gray-200'}`}>
+          <thead className={isDark ? 'bg-slate-800' : 'bg-gray-50'}>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-gray-500'}`}>
                 Gorsel
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-gray-500'}`}>
                 Başlık
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-gray-500'}`}>
                 Kaynak
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-gray-500'}`}>
                 Kategoriler
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-gray-500'}`}>
                 Tarih
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className={isDark ? 'bg-slate-900 divide-y divide-slate-700' : 'bg-white divide-y divide-gray-200'}>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-500 text-sm">
+                <td colSpan={5} className={`px-4 py-6 text-center text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                   Haberler yükleniyor...
                 </td>
               </tr>
             ) : news.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-500 text-sm">
+                <td colSpan={5} className={`px-4 py-6 text-center text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                   Gösterilecek haber bulunamadı.
                 </td>
               </tr>
@@ -242,11 +251,11 @@ function NewsList() {
               news.map((n) => (
                 <tr
                   key={n.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className={`cursor-pointer ${isDark ? 'hover:bg-slate-800/60' : 'hover:bg-gray-50'}`}
                   onClick={() => navigate(`/news/${n.id}`)}
                 >
                   <td className="px-4 py-3">
-                    <div className="h-14 w-20 rounded-md overflow-hidden bg-gray-100">
+                    <div className={`h-14 w-20 rounded-md overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
                       {n.imageUrl ? (
                         <img
                           src={n.imageUrl}
@@ -255,11 +264,11 @@ function NewsList() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-r from-blue-100 to-indigo-100" />
+                        <div className={isDark ? 'w-full h-full bg-gradient-to-r from-slate-800 to-slate-700' : 'w-full h-full bg-gradient-to-r from-blue-100 to-indigo-100'} />
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
+                  <td className={`px-4 py-3 text-sm ${isDark ? 'text-slate-100' : 'text-gray-900'}`}>
                     <div className="font-medium line-clamp-2">{n.title}</div>
                     {n.originalUrl && (
                       <a
@@ -272,13 +281,13 @@ function NewsList() {
                       </a>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{n.sourceName}</td>
-                  <td className="px-4 py-3 text-xs text-gray-700">
+                  <td className={`px-4 py-3 text-sm ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>{n.sourceName}</td>
+                  <td className={`px-4 py-3 text-xs ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
                     {n.categoryNames?.length
                       ? n.categoryNames.join(', ')
                       : 'Kategori yok'}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">
+                  <td className={`px-4 py-3 text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
                     {n.publishedAt
                       ? new Date(n.publishedAt).toLocaleString('tr-TR')
                       : '-'}
@@ -291,8 +300,8 @@ function NewsList() {
       </div>
 
       {!loading && totalPages > 1 && (
-        <div className="mt-4 bg-white rounded-xl shadow p-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-gray-600">
+        <div className={`mt-4 rounded-xl shadow p-4 flex flex-wrap items-center justify-between gap-3 ${isDark ? 'bg-slate-900 border border-slate-700' : 'bg-white'}`}>
+          <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-gray-600'}`}>
             Toplam {totalElements} haber • Sayfa {page + 1} / {totalPages}
           </p>
 
@@ -305,7 +314,9 @@ function NewsList() {
                 updateQueryParams({ page: nextPage })
               }}
               disabled={page === 0}
-              className="px-3 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              className={`px-3 py-2 rounded-lg border text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                isDark ? 'border-slate-700 text-slate-200 hover:bg-slate-800' : 'border-gray-300 hover:bg-gray-100'
+              }`}
             >
               Onceki
             </button>
@@ -322,7 +333,9 @@ function NewsList() {
                   className={`px-3 py-2 rounded-lg border text-sm ${
                     pageNumber - 1 === page
                       ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                      : isDark
+                        ? 'border-slate-700 text-slate-200 hover:bg-slate-800'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   {pageNumber}
@@ -337,7 +350,9 @@ function NewsList() {
                 updateQueryParams({ page: nextPage })
               }}
               disabled={page >= totalPages - 1}
-              className="px-3 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              className={`px-3 py-2 rounded-lg border text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                isDark ? 'border-slate-700 text-slate-200 hover:bg-slate-800' : 'border-gray-300 hover:bg-gray-100'
+              }`}
             >
               Sonraki
             </button>
@@ -349,7 +364,9 @@ function NewsList() {
                 setPage(nextPage)
                 updateQueryParams({ page: nextPage })
               }}
-              className="ml-2 px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white max-h-44 overflow-y-auto"
+              className={`ml-2 px-2 py-2 border rounded-lg text-sm max-h-44 overflow-y-auto ${
+                isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-gray-300 bg-white'
+              }`}
               title="Sayfa sec"
             >
               {pageNumbers.map((p) => (
@@ -367,7 +384,9 @@ function NewsList() {
                 value={jumpPage}
                 onChange={(e) => setJumpPage(e.target.value)}
                 placeholder="Git"
-                className="w-16 px-2 py-2 border border-gray-300 rounded-lg text-sm"
+                className={`w-16 px-2 py-2 border rounded-lg text-sm ${
+                  isDark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-gray-300'
+                }`}
               />
               <button
                 type="button"
@@ -380,7 +399,9 @@ function NewsList() {
                   updateQueryParams({ page: nextPage })
                   setJumpPage('')
                 }}
-                className="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-100"
+                className={`px-3 py-2 rounded-lg border text-sm ${
+                  isDark ? 'border-slate-700 text-slate-200 hover:bg-slate-800' : 'border-gray-300 hover:bg-gray-100'
+                }`}
               >
                 Git
               </button>

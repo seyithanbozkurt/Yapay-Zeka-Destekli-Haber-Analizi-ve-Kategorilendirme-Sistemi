@@ -35,19 +35,43 @@ public interface NewsRepository extends JpaRepository<News, Long> {
     @Query("SELECT n FROM News n WHERE (n.imageUrl IS NULL OR n.imageUrl = '') AND n.originalUrl IS NOT NULL AND n.originalUrl <> ''")
     List<News> findMissingImageUrlNews();
 
+    /**
+     * PostgreSQL: title/content veritabanında hâlâ {@code bytea} ise JPQL {@code LOWER(...)} patlar.
+     * {@code pg_typeof} ile metin araması hem {@code text} hem {@code bytea} kolonlarda çalışır.
+     */
     @Query(
-            value = "SELECT DISTINCT n FROM News n " +
-                    "LEFT JOIN n.source s " +
-                    "LEFT JOIN n.categories c " +
-                    "WHERE (:search IS NULL OR LOWER(n.title) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(n.content) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-                    "AND (:sourceName IS NULL OR s.name = :sourceName) " +
-                    "AND (:categoryName IS NULL OR c.name = :categoryName)",
-            countQuery = "SELECT COUNT(DISTINCT n.id) FROM News n " +
-                    "LEFT JOIN n.source s " +
-                    "LEFT JOIN n.categories c " +
-                    "WHERE (:search IS NULL OR LOWER(n.title) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(n.content) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-                    "AND (:sourceName IS NULL OR s.name = :sourceName) " +
-                    "AND (:categoryName IS NULL OR c.name = :categoryName)"
+            value = """
+                    SELECT DISTINCT n.* FROM news n
+                    LEFT JOIN sources s ON s.id = n.source_id
+                    LEFT JOIN news_categories nc ON n.id = nc.news_id
+                    LEFT JOIN categories c ON c.id = nc.category_id
+                    WHERE (:search IS NULL
+                        OR lower(CASE WHEN pg_typeof(n.title) = 'bytea'::regtype
+                                 THEN convert_from(n.title::bytea, 'UTF8'::name) ELSE n.title::text END)
+                           LIKE lower(concat('%', :search, '%'))
+                        OR lower(CASE WHEN pg_typeof(n.content) = 'bytea'::regtype
+                                 THEN convert_from(n.content::bytea, 'UTF8'::name) ELSE n.content::text END)
+                           LIKE lower(concat('%', :search, '%')))
+                    AND (:sourceName IS NULL OR s.name = :sourceName)
+                    AND (:categoryName IS NULL OR c.name = :categoryName)
+                    ORDER BY n.published_at DESC NULLS LAST, n.id DESC
+                    """,
+            countQuery = """
+                    SELECT count(DISTINCT n.id) FROM news n
+                    LEFT JOIN sources s ON s.id = n.source_id
+                    LEFT JOIN news_categories nc ON n.id = nc.news_id
+                    LEFT JOIN categories c ON c.id = nc.category_id
+                    WHERE (:search IS NULL
+                        OR lower(CASE WHEN pg_typeof(n.title) = 'bytea'::regtype
+                                 THEN convert_from(n.title::bytea, 'UTF8'::name) ELSE n.title::text END)
+                           LIKE lower(concat('%', :search, '%'))
+                        OR lower(CASE WHEN pg_typeof(n.content) = 'bytea'::regtype
+                                 THEN convert_from(n.content::bytea, 'UTF8'::name) ELSE n.content::text END)
+                           LIKE lower(concat('%', :search, '%')))
+                    AND (:sourceName IS NULL OR s.name = :sourceName)
+                    AND (:categoryName IS NULL OR c.name = :categoryName)
+                    """,
+            nativeQuery = true
     )
     Page<News> findPageWithFilters(
             @Param("search") String search,
