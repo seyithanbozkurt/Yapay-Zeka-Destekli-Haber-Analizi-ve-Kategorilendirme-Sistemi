@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { ensureLegacyNewsActivityMigrated } from '../services/legacyNewsActivityMigration'
 
 interface AuthContextType {
   token: string | null
@@ -32,6 +33,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(USERNAME_KEY)
     }
   }, [username])
+
+  useEffect(() => {
+    if (!token) return
+    void ensureLegacyNewsActivityMigrated().catch(() => {
+      /* sessiz: bir sonraki oturumda veya profil yüklemesinde tekrar dene */
+    })
+  }, [token])
 
   const login = (newToken: string, newUsername: string) => {
     setToken(newToken)

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { fetchAllNews } from '../services/newsService'
 import type { News } from '../types/news'
 import { api } from '../services/api'
+import { useTheme } from '../context/ThemeContext'
 
 interface HomeStats {
   newsCount: number
@@ -12,6 +13,8 @@ interface HomeStats {
 }
 
 function Home() {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const [news, setNews] = useState<News[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<HomeStats | null>(null)
@@ -90,68 +93,110 @@ function Home() {
     container.scrollTo({ left: target, behavior: 'smooth' })
   }
 
+  const renderMarketRow = (keyPrefix: string) => (
+    <div key={keyPrefix} className="flex shrink-0 items-center">
+      {marketItems.map((item, i) => (
+        <div key={`${keyPrefix}-${item.label}`} className="flex shrink-0 items-center">
+          {i > 0 && <span className="mx-3 h-5 w-px shrink-0 bg-slate-600" aria-hidden />}
+          <div className="flex items-baseline gap-1.5 pr-1">
+            <span className="text-[10px] font-semibold text-slate-400">{item.label}</span>
+            <span className="text-xs font-semibold tabular-nums text-white">{item.value}</span>
+            <span
+              className={`text-[10px] font-medium tabular-nums ${
+                item.positive ? 'text-emerald-400' : 'text-red-400'
+              }`}
+            >
+              {item.change}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
   return (
-    <div className="space-y-8">
-      <section className="bg-white rounded-xl shadow p-4">
-        <div className="mb-3">
-          <h2 className="text-sm font-semibold text-gray-900">Güncel Piyasa</h2>
+    <div className="space-y-6">
+      {/* Sadece piyasa: tam genişlik ticker: güncel haber bloğu ile asla yan yana değil */}
+      <section
+        className="bg-slate-900 text-slate-100 rounded-lg border border-slate-800 shadow-sm"
+        aria-label="Güncel piyasa"
+      >
+        <div className="flex items-center gap-2 border-b border-slate-700/80 px-3 py-1.5 sm:px-4">
+          <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-amber-400/90">
+            Piyasa
+          </span>
+          <span className="hidden h-4 w-px bg-slate-600 sm:block" aria-hidden />
+          <p className="min-w-0 truncate text-[10px] text-slate-400">Örnek veri — canlı bağlantı yok</p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {marketItems.map((item) => (
-            <div key={item.label} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-              <p className="text-[11px] text-gray-500">{item.label}</p>
-              <p className="mt-1 text-base font-semibold text-gray-900">{item.value}</p>
-              <p
-                className={`text-xs font-medium mt-0.5 ${
-                  item.positive ? 'text-emerald-600' : 'text-red-600'
-                }`}
-              >
-                {item.change}
-              </p>
-            </div>
-          ))}
+        <div className="overflow-hidden py-2">
+          <div className="home-marquee-track items-center px-1">
+            {renderMarketRow('t1')}
+            {renderMarketRow('t2')}
+          </div>
         </div>
       </section>
 
-      <section className="bg-white rounded-xl shadow p-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Genel Durum</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-3.5">
-            <p className="text-xs text-gray-500">Toplam Haber</p>
-            <p className="mt-1.5 text-2xl font-bold text-gray-900">
+      {/* Genel durum: ayrı satır, tam genişlik */}
+      <section
+        className={`rounded-lg border px-3 py-2 shadow-sm sm:px-4 ${
+          isDark ? 'border-slate-700 bg-slate-900' : 'border-gray-200/80 bg-white'
+        }`}
+      >
+        <p className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-slate-400' : 'text-gray-400'}`}>
+          Genel durum
+        </p>
+        <div
+          className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm sm:gap-x-4 ${
+            isDark ? 'text-slate-300' : 'text-gray-600'
+          }`}
+        >
+          <span className="inline-flex items-baseline gap-1">
+            <span className={`font-semibold tabular-nums ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {loading || !stats ? '—' : stats.newsCount}
-            </p>
-          </div>
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-3.5">
-            <p className="text-xs text-gray-500">Toplam Kategori</p>
-            <p className="mt-1.5 text-2xl font-bold text-gray-900">
+            </span>
+            <span className={isDark ? 'text-slate-400' : 'text-gray-500'}>haber</span>
+          </span>
+          <span className={isDark ? 'text-slate-600' : 'text-gray-300'} aria-hidden>
+            ·
+          </span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className={`font-semibold tabular-nums ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {loading || !stats ? '—' : stats.categoryCount}
-            </p>
-          </div>
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-3.5">
-            <p className="text-xs text-gray-500">Toplam Kaynak</p>
-            <p className="mt-1.5 text-2xl font-bold text-gray-900">
+            </span>
+            <span className={isDark ? 'text-slate-400' : 'text-gray-500'}>kategori</span>
+          </span>
+          <span className={isDark ? 'text-slate-600' : 'text-gray-300'} aria-hidden>
+            ·
+          </span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className={`font-semibold tabular-nums ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {loading || !stats ? '—' : stats.sourceCount}
-            </p>
-          </div>
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-3.5">
-            <p className="text-xs text-gray-500">Toplam Geri Bildirim</p>
-            <p className="mt-1.5 text-2xl font-bold text-gray-900">
+            </span>
+            <span className={isDark ? 'text-slate-400' : 'text-gray-500'}>kaynak</span>
+          </span>
+          <span className={isDark ? 'text-slate-600' : 'text-gray-300'} aria-hidden>
+            ·
+          </span>
+          <span className="inline-flex items-baseline gap-1">
+            <span className={`font-semibold tabular-nums ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {loading || !stats ? '—' : stats.feedbackCount}
-            </p>
-          </div>
+            </span>
+            <span className={isDark ? 'text-slate-400' : 'text-gray-500'}>geri bildirim</span>
+          </span>
         </div>
       </section>
 
-      <section className="bg-white rounded-xl shadow p-5">
+      <section
+        className={`rounded-xl shadow p-5 ${isDark ? 'bg-slate-900 border border-slate-700' : 'bg-white'}`}
+      >
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-gray-900">Son Dakika / Öne Çıkanlar</h1>
+          <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Son Dakika / Öne Çıkanlar</h1>
           <Link to="/news" className="text-sm text-blue-600 hover:underline">
             Tüm haberler
           </Link>
         </div>
         {loading ? (
-          <p className="text-sm text-gray-500">Haberler yükleniyor...</p>
+          <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>Haberler yükleniyor...</p>
         ) : (
           <div
             className="relative"
@@ -179,7 +224,7 @@ function Home() {
                   rel={item.originalUrl ? 'noreferrer' : undefined}
                   className="relative min-w-[85%] md:min-w-[70%] lg:min-w-[58%] h-[280px] md:h-[360px] rounded-2xl overflow-hidden shadow snap-start group"
                 >
-                  <div className="h-full w-full bg-gray-100">
+                  <div className={`h-full w-full ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
@@ -188,7 +233,13 @@ function Home() {
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-r from-blue-100 to-indigo-100 grid place-items-center text-base text-gray-700 font-medium">
+                      <div
+                        className={`w-full h-full grid place-items-center text-base font-medium ${
+                          isDark
+                            ? 'bg-gradient-to-r from-slate-800 to-slate-700 text-slate-200'
+                            : 'bg-gradient-to-r from-blue-100 to-indigo-100 text-gray-700'
+                        }`}
+                      >
                         Haber görseli yok
                       </div>
                     )}
@@ -217,16 +268,22 @@ function Home() {
         )}
       </section>
 
-      <section className="bg-white rounded-xl shadow p-5">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Günün Haberleri</h2>
+      <section
+        className={`rounded-xl shadow p-5 ${isDark ? 'bg-slate-900 border border-slate-700' : 'bg-white'}`}
+      >
+        <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Günün Haberleri</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {cards.map((item) => (
             <Link
               key={item.id}
               to={`/news/${item.id}`}
-              className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+              className={`rounded-xl overflow-hidden transition-shadow ${
+                isDark
+                  ? 'border border-slate-700 bg-slate-900 hover:shadow-[0_8px_24px_rgba(0,0,0,0.35)]'
+                  : 'border border-gray-200 hover:shadow-md'
+              }`}
             >
-              <div className="h-36 bg-gray-100">
+              <div className={`h-36 ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
                 {item.imageUrl ? (
                   <img
                     src={item.imageUrl}
@@ -235,14 +292,22 @@ function Home() {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-r from-blue-100 to-indigo-100 grid place-items-center text-sm text-gray-600">
+                  <div
+                    className={`w-full h-full grid place-items-center text-sm ${
+                      isDark
+                        ? 'bg-gradient-to-r from-slate-800 to-slate-700 text-slate-300'
+                        : 'bg-gradient-to-r from-blue-100 to-indigo-100 text-gray-600'
+                    }`}
+                  >
                     Haber gorseli
                   </div>
                 )}
               </div>
               <div className="p-4">
-                <p className="text-xs text-gray-500">{item.sourceName}</p>
-                <h3 className="mt-1 text-sm font-semibold text-gray-900 line-clamp-2">{item.title}</h3>
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>{item.sourceName}</p>
+                <h3 className={`mt-1 text-sm font-semibold line-clamp-2 ${isDark ? 'text-slate-100' : 'text-gray-900'}`}>
+                  {item.title}
+                </h3>
               </div>
             </Link>
           ))}
