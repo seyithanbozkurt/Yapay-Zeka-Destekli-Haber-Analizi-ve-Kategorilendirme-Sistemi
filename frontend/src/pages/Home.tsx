@@ -4,6 +4,7 @@ import { fetchAllNews } from '../services/newsService'
 import type { News } from '../types/news'
 import { api } from '../services/api'
 import { useTheme } from '../context/ThemeContext'
+import { fetchMarketItems, type MarketItem } from '../services/marketService'
 
 interface HomeStats {
   newsCount: number
@@ -18,6 +19,10 @@ function Home() {
   const [news, setNews] = useState<News[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<HomeStats | null>(null)
+  const [marketItems, setMarketItems] = useState<MarketItem[]>([])
+  const [marketLoading, setMarketLoading] = useState(true)
+  const [marketError, setMarketError] = useState('')
+  const [marketUpdatedAt, setMarketUpdatedAt] = useState<string | null>(null)
   const featuredScrollRef = useRef<HTMLDivElement | null>(null)
   const [isFeaturedHovered, setIsFeaturedHovered] = useState(false)
 
@@ -49,15 +54,44 @@ function Home() {
     }
   }, [])
 
+  useEffect(() => {
+    let isMounted = true
+
+    const loadMarket = async () => {
+      try {
+        setMarketLoading(true)
+        setMarketError('')
+        const data = await fetchMarketItems()
+        if (!isMounted) return
+        setMarketItems(data)
+        setMarketUpdatedAt(
+          new Date().toLocaleTimeString('tr-TR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        )
+      } catch {
+        if (!isMounted) return
+        setMarketItems([])
+        setMarketError('Canlı piyasa verileri şu an alınamıyor.')
+      } finally {
+        if (isMounted) setMarketLoading(false)
+      }
+    }
+
+    void loadMarket()
+    const interval = window.setInterval(() => {
+      void loadMarket()
+    }, 5 * 60 * 1000)
+
+    return () => {
+      isMounted = false
+      window.clearInterval(interval)
+    }
+  }, [])
+
   const featured = news.slice(0, 8)
   const cards = news.slice(0, 15)
-  const marketItems = [
-    { label: 'DOLAR', value: '38.42', change: '+0.24%', positive: true },
-    { label: 'EURO', value: '43.71', change: '+0.19%', positive: true },
-    { label: 'ALTIN', value: '2,487', change: '+0.62%', positive: true },
-    { label: 'BIST 100', value: '9,821', change: '-0.31%', positive: false },
-    { label: 'PETROL', value: '84.10', change: '-0.12%', positive: false },
-  ]
 
   useEffect(() => {
     if (loading || featured.length <= 1) return
@@ -98,9 +132,18 @@ function Home() {
       {marketItems.map((item, i) => (
         <div key={`${keyPrefix}-${item.label}`} className="flex shrink-0 items-center">
           {i > 0 && <span className="mx-3 h-5 w-px shrink-0 bg-slate-600" aria-hidden />}
-          <div className="flex items-baseline gap-1.5 pr-1">
+          <a
+            href="https://www.tcmb.gov.tr/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="TCMB piyasa değerlerini aç"
+            className="flex items-baseline gap-1.5 pr-1 rounded transition-colors hover:bg-slate-800/60 focus:bg-slate-800/60 focus:outline-none focus:ring-1 focus:ring-amber-400/40 px-1 -mx-1"
+          >
             <span className="text-[10px] font-semibold text-slate-400">{item.label}</span>
-            <span className="text-xs font-semibold tabular-nums text-white">{item.value}</span>
+            <span className="text-xs font-semibold tabular-nums text-white">
+              {item.label === 'PETROL' ? '$' : '₺'}
+              {item.value}
+            </span>
             <span
               className={`text-[10px] font-medium tabular-nums ${
                 item.positive ? 'text-emerald-400' : 'text-red-400'
@@ -108,11 +151,19 @@ function Home() {
             >
               {item.change}
             </span>
-          </div>
+          </a>
         </div>
       ))}
     </div>
   )
+
+  const marketDescription = marketError
+    ? marketError
+    : marketLoading
+      ? 'Canlı piyasa verileri yükleniyor...'
+      : marketUpdatedAt
+        ? `Canlı veri — son güncelleme ${marketUpdatedAt}`
+        : 'Canlı veri'
 
   return (
     <div className="space-y-6">
@@ -126,13 +177,19 @@ function Home() {
             Piyasa
           </span>
           <span className="hidden h-4 w-px bg-slate-600 sm:block" aria-hidden />
-          <p className="min-w-0 truncate text-[10px] text-slate-400">Örnek veri — canlı bağlantı yok</p>
+          <p className="min-w-0 truncate text-[10px] text-slate-400">{marketDescription}</p>
         </div>
         <div className="overflow-hidden py-2">
-          <div className="home-marquee-track items-center px-1">
-            {renderMarketRow('t1')}
-            {renderMarketRow('t2')}
-          </div>
+          {marketLoading && marketItems.length === 0 ? (
+            <div className="px-3 text-xs text-slate-400">Piyasa verileri yükleniyor...</div>
+          ) : marketItems.length > 0 ? (
+            <div className="home-marquee-track items-center px-1">
+              {renderMarketRow('t1')}
+              {renderMarketRow('t2')}
+            </div>
+          ) : (
+            <div className="px-3 text-xs text-red-300">Piyasa verileri gösterilemiyor.</div>
+          )}
         </div>
       </section>
 
