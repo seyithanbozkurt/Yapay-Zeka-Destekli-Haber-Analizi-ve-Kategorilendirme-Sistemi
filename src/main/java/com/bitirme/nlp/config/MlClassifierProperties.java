@@ -21,6 +21,12 @@ public class MlClassifierProperties {
     /// Spark master (local mode için local[*]).
     private String sparkMaster = "local[*]";
 
+    /**
+     * {@code spark.io.compression.codec}. JRE-only Docker imajlarında lz4 native eksik olabiliyor;
+     * {@code lzf} veya {@code snappy} (snappy-java jar) tercih edilir.
+     */
+    private String sparkIoCompressionCodec = "lzf";
+
     // Eğitilmiş PipelineModel'in kaydedildiği dizin.
     private String modelPath = "data/ml-model";
 
@@ -49,8 +55,26 @@ public class MlClassifierProperties {
     // Minimum güven eşiği (altındaki tahminler 'Diğer' sayılabilir).
     private double minConfidence = 0.0;
 
+    /**
+     * Anahtar kelime tabanlı sınıflandırmada kaydedilecek tahmin skorunun alt sınırı (prediction_score).
+     * Eski sabit 0.62 yerine yapılandırılabilir; yüksek değer eğitim/geri bildirim için daha "güvenli" etiket varsayar.
+     */
+    private double keywordConfidenceFloor = 0.99;
+
     // Eğitim için minimum etiketli haber sayısı.
     private int minTrainingSamples = 50;
+
+    // İzole Spark eğitimi için üst örnek sayısı (0 = sınır yok).
+    private int sparkMaxTrainingSamples = 300;
+
+    // Naive Bayes Laplace/Lidstone smoothing katsayısı (öğrenme katsayısı).
+    private double naiveBayesAlpha = 1.0;
+
+    // Küresel frekansı bu değerin altında kalan terimleri modelden çıkar.
+    private int naiveBayesMinGlobalTermFreq = 1;
+
+    // Doküman başına kullanılacak maksimum terim (0 = sınır yok).
+    private int naiveBayesMaxTermsPerDoc = 0;
 
     // --- Özellik çıkarımı (n-gram) ---
 

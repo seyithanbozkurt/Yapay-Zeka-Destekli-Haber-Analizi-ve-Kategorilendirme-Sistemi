@@ -8,6 +8,8 @@ import com.bitirme.exception.AlreadyExistsException;
 import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.SourceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class SourceServiceImpl implements SourceService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"sources_all", "source_by_id"}, allEntries = true)
     public SourceResponse create(SourceCreateRequest request) {
         if (sourceRepository.existsByName(request.getName())) {
             throw new AlreadyExistsException("Haber kaynağı adı zaten kullanılıyor: " + request.getName());
@@ -44,6 +47,7 @@ public class SourceServiceImpl implements SourceService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "source_by_id", key = "#id")
     public SourceResponse getById(Integer id) {
         Source source = sourceRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Kaynak bulunamadı: " + id));
@@ -52,6 +56,7 @@ public class SourceServiceImpl implements SourceService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("sources_all")
     public List<SourceResponse> getAll() {
         return sourceRepository.findAll().stream()
                 .map(this::toResponse)
@@ -60,6 +65,7 @@ public class SourceServiceImpl implements SourceService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"sources_all", "source_by_id"}, allEntries = true)
     public SourceResponse update(Integer id, SourceUpdateRequest request) {
         Source source = sourceRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Kaynak bulunamadı: " + id));
@@ -113,6 +119,7 @@ public class SourceServiceImpl implements SourceService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"sources_all", "source_by_id"}, allEntries = true)
     public void delete(Integer id) {
         if (!sourceRepository.existsById(id)) {
             throw new NotFoundException("Kaynak bulunamadı: " + id);

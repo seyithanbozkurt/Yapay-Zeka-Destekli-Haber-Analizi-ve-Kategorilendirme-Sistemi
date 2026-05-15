@@ -17,8 +17,11 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -28,6 +31,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * Spark + Naive Bayes tam eğitim akışı (controller'dan çağrılır; senkron veya arka planda).
@@ -137,6 +142,7 @@ public class MlModelTrainingService {
             }
 
             if (mlProperties.isSparkTrainIsolatedFirst() && preemptiveIsolated != null && !preemptiveIsolated.success) {
+                // İzole mod açıksa ANTLR çakışmasını tetiklememek için ana JVM Spark eğitimine geçme.
                 sparkTrainingFinished = true;
                 data.put("sparkTrainedSamples", 0);
                 data.put("sparkInProcessSkippedAfterIsolatedFailure", true);
@@ -276,10 +282,15 @@ public class MlModelTrainingService {
         }
         CompletableFuture.runAsync(() -> {
             try {
-                sparkClassifier.get().loadModel();
-                log.info("Spark loadModel arka plan görevi tamamlandı.");
+                SparkNewsClassifier classifier = sparkClassifier.get();
+                classifier.loadModel();
+                if (classifier.isModelLoaded()) {
+                    log.info("Spark modeli diskten yüklendi; tahmin için hazır.");
+                } else {
+                    log.warn("loadModel çalıştı fakat model bellekte yok (SparkContext veya data/ml-model içeriği kontrol edin).");
+                }
             } catch (Throwable ex) {
-                log.error("Arka plan loadModel: {}", ex.getMessage());
+                log.error("Arka plan loadModel başarısız", ex);
             }
         });
         data.put("sparkModelReloadScheduled", true);
@@ -392,12 +403,10 @@ public class MlModelTrainingService {
                 return new SparkIsolatedTrainResult(false, 0, null, null, "java.class.path boş");
             }
 
-            List<String> filtered = new ArrayList<>();
-            for (String entry : cp.split(File.pathSeparator)) {
-                String lower = entry.toLowerCase(Locale.ROOT);
-                if (lower.contains("hibernate-core")) continue;
-                if (lower.contains("antlr4-runtime-")) continue;
-                filtered.add(entry);
+            List<String> filtered = buildIsolatedClasspathEntries(cp);
+            if (filtered.isEmpty()) {
+                return new SparkIsolatedTrainResult(false, 0, null, null,
+                        "İzole Spark classpath oluşturulamadı (boş).");
             }
 
             Path antlr493 = resolveAntlr493JarPathForIsolatedSpark();
@@ -416,8 +425,26 @@ public class MlModelTrainingService {
 
             List<String> cmd = new ArrayList<>();
             cmd.add(javaBin);
-            cmd.add("--add-opens=java.base/sun.nio.ch=ALL-UNNAMED");
+            // Spark 3.5 + Java 21: ana süreçteki JAVA_TOOL_OPTIONS izole çocukta otomatik gelmez;
+            // Hadoop/Netty yansıma için pom'daki Spark JVM bayraklarına yakın tam liste.
+            Collections.addAll(cmd,
+                    "--add-opens=java.base/java.lang=ALL-UNNAMED",
+                    "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
+                    "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+                    "--add-opens=java.base/java.io=ALL-UNNAMED",
+                    "--add-opens=java.base/java.net=ALL-UNNAMED",
+                    "--add-opens=java.base/java.nio=ALL-UNNAMED",
+                    "--add-opens=java.base/java.util=ALL-UNNAMED",
+                    "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED",
+                    "--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED",
+                    "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+                    "--add-opens=java.base/sun.nio.cs=ALL-UNNAMED",
+                    "--add-opens=java.base/sun.security.action=ALL-UNNAMED",
+                    "--add-opens=java.base/sun.util.calendar=ALL-UNNAMED");
             cmd.add("-Djava.security.manager=allow");
+            cmd.add("-Dhadoop.tmp.dir=/tmp/bitirme-spark-hadoop-tmp");
+            cmd.add("-XX:+UseContainerSupport");
+            cmd.add("-Xmx2048m");
             cmd.add("-cp");
             cmd.add(childCp);
             cmd.add("com.bitirme.nlp.SparkStandaloneTrainerMain");
@@ -432,10 +459,12 @@ public class MlModelTrainingService {
             cmd.add("--ngramMax=" + mlProperties.getNGramMax());
             cmd.add("--numFeatures=" + mlProperties.getNumFeatures());
             cmd.add("--minTrainingSamples=" + mlProperties.getMinTrainingSamples());
+            cmd.add("--sparkMaxTrainingSamples=" + mlProperties.getSparkMaxTrainingSamples());
 
             cmd.add("--runEvaluationAfterTrain=" + mlProperties.isRunEvaluationAfterTrain());
             cmd.add("--testSplitRatio=" + mlProperties.getTestSplitRatio());
             cmd.add("--evaluationSeed=" + mlProperties.getEvaluationSeed());
+            cmd.add("--sparkIoCompressionCodec=" + mlProperties.getSparkIoCompressionCodec());
 
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.directory(new File("."));
@@ -479,11 +508,101 @@ public class MlModelTrainingService {
             if (exit == 0 && samples != null && samples > 0) {
                 return new SparkIsolatedTrainResult(true, samples, accuracy, weightedF1, null);
             }
+            String out = capturedOut.toString();
+            if (log.isWarnEnabled()) {
+                int max = 16_000;
+                String chunk = out.length() > max ? out.substring(0, max) + "\n...[truncated]" : out;
+                log.warn("İzole Spark çıkış kodu={}, SPARK_TRAINING_RESULT satırı={}. Çıktı:\n{}", exit,
+                        resultLine != null ? resultLine : "(yok)", chunk);
+            }
+            String tail = out.length() > 1200 ? out.substring(out.length() - 1200) : out;
             return new SparkIsolatedTrainResult(false, samples != null ? samples : 0, accuracy, weightedF1,
-                    "process exit=" + exit);
+                    "process exit=" + exit + ", outputTail=" + tail.replaceAll("\\s+", " ").trim());
         } catch (Throwable e) {
             return new SparkIsolatedTrainResult(false, 0, null, null, e.getClass().getSimpleName() + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Spring Boot fat jar altında child JVM classpath'i için:
+     * - BOOT-INF/classes + BOOT-INF/lib/* çıkarılır
+     * - hibernate-core ve antlr4-runtime hariç tutulur
+     */
+    private List<String> buildIsolatedClasspathEntries(String cp) throws IOException {
+        List<String> entries = new ArrayList<>();
+        for (String entry : cp.split(File.pathSeparator)) {
+            String lower = entry.toLowerCase(Locale.ROOT);
+            if (lower.contains("hibernate-core") || lower.contains("antlr4-runtime-")) {
+                continue;
+            }
+            // Spark UI/Jetty Log4j2 LoggerContext bekler; Logback ile SLF4J bağlanırsa ClassCastException olur.
+            if (lower.contains("logback-") || lower.contains("log4j-to-slf4j")) {
+                continue;
+            }
+            if (entry.endsWith(".jar") && lower.endsWith("app.jar")) {
+                entries.addAll(extractBootJarForIsolatedClasspath(Path.of(entry)));
+            } else {
+                entries.add(entry);
+            }
+        }
+        return entries;
+    }
+
+    private List<String> extractBootJarForIsolatedClasspath(Path appJar) throws IOException {
+        Path root = Path.of(System.getProperty("java.io.tmpdir"), "bitirme-spark-isolated-cp");
+        Path classesDir = root.resolve("classes");
+        Path libsDir = root.resolve("lib");
+        if (Files.exists(root)) {
+            // Güncel build için temiz çıkarım
+            Files.walk(root)
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(pathEntry -> {
+                        try { Files.deleteIfExists(pathEntry); } catch (IOException ignored) {}
+                    });
+        }
+        Files.createDirectories(classesDir);
+        Files.createDirectories(libsDir);
+
+        try (JarFile jar = new JarFile(appJar.toFile())) {
+            var it = jar.entries();
+            while (it.hasMoreElements()) {
+                JarEntry e = it.nextElement();
+                String name = e.getName();
+                if (e.isDirectory()) continue;
+
+                if (name.startsWith("BOOT-INF/classes/")) {
+                    String rel = name.substring("BOOT-INF/classes/".length());
+                    if (rel.isBlank()) continue;
+                    Path out = classesDir.resolve(rel);
+                    Files.createDirectories(out.getParent());
+                    try (InputStream in = jar.getInputStream(e)) {
+                        Files.copy(in, out, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                } else if (name.startsWith("BOOT-INF/lib/") && name.endsWith(".jar")) {
+                    String libName = name.substring("BOOT-INF/lib/".length()).toLowerCase(Locale.ROOT);
+                    if (libName.contains("hibernate-core") || libName.contains("antlr4-runtime-")) {
+                        continue;
+                    }
+                    if (libName.contains("logback-") || libName.contains("log4j-to-slf4j")) {
+                        continue;
+                    }
+                    Path out = libsDir.resolve(name.substring("BOOT-INF/lib/".length()));
+                    try (InputStream in = jar.getInputStream(e)) {
+                        Files.copy(in, out, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
+        }
+
+        List<String> cp = new ArrayList<>();
+        cp.add(classesDir.toAbsolutePath().toString());
+        try (var stream = Files.list(libsDir)) {
+            stream.filter(p -> p.toString().endsWith(".jar"))
+                    .map(p -> p.toAbsolutePath().toString())
+                    .sorted()
+                    .forEach(cp::add);
+        }
+        return cp;
     }
 
     private Map<String, String> parseSparkResultLine(String line) {

@@ -48,11 +48,21 @@ public class NewsController {
     }
 
     @GetMapping
-    @Operation(summary = "Tüm haberleri listele", description = "Sistemdeki tüm haberleri listeler")
+    @Operation(summary = "Tüm haberleri listele", description = "Sistemdeki tüm haberleri listeler (Frontend uyumluluğu için)")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Haber listesi başarıyla getirildi")
     public ResponseEntity<ApiResponse<List<NewsResponse>>> getAll() {
         List<NewsResponse> responses = newsService.getAll();
         return ResponseEntity.ok(ApiResponse.success(responses));
+    }
+
+    @GetMapping("/paginated")
+    @Operation(summary = "Haberleri listele (Sayfalı)", description = "Sistemdeki haberleri sayfalandırılmış olarak getirir")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Haber listesi başarıyla getirildi")
+    public ResponseEntity<ApiResponse<com.bitirme.dto.news.NewsPageResponse>> getPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        com.bitirme.dto.news.NewsPageResponse response = newsService.getPaginated(page, size);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PutMapping

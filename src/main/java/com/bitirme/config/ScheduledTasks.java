@@ -25,6 +25,7 @@ public class ScheduledTasks {
     private final ModelVersionRepository modelVersionRepository;
     private final NewsRepository newsRepository;
     private final NewsClassificationResultRepository newsClassificationResultRepository;
+    private final com.bitirme.service.CacheWarmupService cacheWarmupService;
     
     @PersistenceContext
     private EntityManager entityManager;
@@ -39,6 +40,7 @@ public class ScheduledTasks {
         try {
             int fetchedCount = newsCrawlerService.crawlAllSources();
             log.info("Scheduled news crawling completed. {} news fetched.", fetchedCount);
+            cacheWarmupService.warmupCaches();
         } catch (Exception e) {
             log.error("Error in scheduled news crawling: {}", e.getMessage());
         }
@@ -51,6 +53,7 @@ public class ScheduledTasks {
         try {
             int fetchedCount = newsCrawlerService.crawlBreakingNews();
             log.info("Scheduled breaking news crawling completed. {} news fetched.", fetchedCount);
+            cacheWarmupService.warmupCaches();
         } catch (Exception e) {
             log.error("Error in scheduled breaking news crawling: {}", e.getMessage());
         }
@@ -148,6 +151,9 @@ public class ScheduledTasks {
             log.info("   • Silinen sınıflandırma: {}", classificationCount);
             log.info("   • Yeni çekilen haber: {}", fetchedCount);
             log.info("═══════════════════════════════════════════════════════════════");
+            
+            // Cache'leri isit
+            cacheWarmupService.warmupCaches();
         } catch (Exception e) {
             log.error("❌ Error in scheduled news deletion and refresh: {}", e.getMessage(), e);
         }

@@ -8,6 +8,8 @@ import com.bitirme.exception.AlreadyExistsException;
 import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"roles_all", "role_by_id"}, allEntries = true)
     public RoleResponse create(RoleCreateRequest request) {
         if (roleRepository.existsByName(request.getName())) {
             throw new AlreadyExistsException("Rol adı zaten kullanılıyor: " + request.getName());
@@ -36,6 +39,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "role_by_id", key = "#id")
     public RoleResponse getById(Integer id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Rol bulunamadı: " + id));
@@ -44,6 +48,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("roles_all")
     public List<RoleResponse> getAll() {
         return roleRepository.findAll().stream()
                 .map(this::toResponse)
@@ -52,6 +57,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"roles_all", "role_by_id"}, allEntries = true)
     public RoleResponse update(Integer id, RoleUpdateRequest request) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Rol bulunamadı: " + id));
@@ -73,6 +79,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"roles_all", "role_by_id"}, allEntries = true)
     public void delete(Integer id) {
         if (!roleRepository.existsById(id)) {
             throw new NotFoundException("Rol bulunamadı: " + id);

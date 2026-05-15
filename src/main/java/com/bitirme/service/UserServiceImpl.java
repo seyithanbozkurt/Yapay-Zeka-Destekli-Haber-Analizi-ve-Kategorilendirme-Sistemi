@@ -10,6 +10,8 @@ import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.RoleRepository;
 import com.bitirme.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"users_all", "user_by_id"}, allEntries = true)
     public UserResponse create(UserCreateRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new AlreadyExistsException("Kullanıcı adı zaten kullanılıyor: " + request.getUsername());
@@ -58,6 +61,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "user_by_id", key = "#id")
     public UserResponse getById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + id));
@@ -66,6 +70,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("users_all")
     public List<UserResponse> getAll() {
         return userRepository.findAll().stream()
                 .map(this::toResponse)
@@ -74,6 +79,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"users_all", "user_by_id"}, allEntries = true)
     public UserResponse update(Long id, UserUpdateRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Kullanıcı bulunamadı: " + id));
@@ -115,6 +121,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"users_all", "user_by_id"}, allEntries = true)
     public void delete(Long id) {
         if (!userRepository.existsById(id)) {
             throw new NotFoundException("Kullanıcı bulunamadı: " + id);

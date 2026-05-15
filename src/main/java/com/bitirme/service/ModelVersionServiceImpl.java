@@ -9,6 +9,8 @@ import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.ModelVersionRepository;
 import com.bitirme.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class ModelVersionServiceImpl implements ModelVersionService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"model_versions_all", "model_version_by_id"}, allEntries = true)
     public ModelVersionResponse create(ModelVersionCreateRequest request) {
         ModelVersion modelVersion = new ModelVersion();
         modelVersion.setName(request.getName());
@@ -40,6 +43,7 @@ public class ModelVersionServiceImpl implements ModelVersionService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "model_version_by_id", key = "#id")
     public ModelVersionResponse getById(Integer id) {
         ModelVersion modelVersion = modelVersionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Model versiyonu bulunamadı: " + id));
@@ -48,6 +52,7 @@ public class ModelVersionServiceImpl implements ModelVersionService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("model_versions_all")
     public List<ModelVersionResponse> getAll() {
         return modelVersionRepository.findAll().stream()
                 .map(this::toResponse)
@@ -56,6 +61,7 @@ public class ModelVersionServiceImpl implements ModelVersionService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"model_versions_all", "model_version_by_id"}, allEntries = true)
     public ModelVersionResponse update(Integer id, ModelVersionUpdateRequest request) {
         ModelVersion modelVersion = modelVersionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Model versiyonu bulunamadı: " + id));
@@ -74,6 +80,7 @@ public class ModelVersionServiceImpl implements ModelVersionService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"model_versions_all", "model_version_by_id"}, allEntries = true)
     public void delete(Integer id) {
         if (!modelVersionRepository.existsById(id)) {
             throw new NotFoundException("Model versiyonu bulunamadı: " + id);

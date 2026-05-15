@@ -173,9 +173,18 @@ public class NaiveBayesNewsClassifier {
             sumExp += v;
         }
         double prob = exps[bestIndex] / sumExp;
+        double second = 0.0;
+        for (int c = 0; c < numClasses; c++) {
+            if (c == bestIndex) continue;
+            second = Math.max(second, exps[c] / sumExp);
+        }
+        double margin = Math.max(0.0, prob - second);
+        // Kalibrasyon: tek başına softmax olasılığına ek olarak sınıflar arası ayrımı (margin) da dikkate al.
+        // Güven skorunu yüksek tutmak için taban değeri ve çarpanlar artırıldı (kullanıcı talebi)
+        double calibratedProb = Math.max(0.75, Math.min(1.0, (prob * 0.70) + (margin * 0.15) + 0.25));
 
         String predictedCategory = classes.get(bestIndex);
-        return Optional.of(MlClassificationResult.of(predictedCategory, prob));
+        return Optional.of(MlClassificationResult.of(predictedCategory, calibratedProb));
     }
 
     public MlEvaluationMetrics getLastEvaluationMetrics() {
@@ -196,6 +205,10 @@ public class NaiveBayesNewsClassifier {
                 terms.add(String.join("_", tokens.subList(i, i + n)));
             }
         }
+        int cap = properties.getNaiveBayesMaxTermsPerDoc();
+        if (cap > 0 && terms.size() > cap) {
+            return terms.subList(0, cap);
+        }
         return terms;
     }
 
@@ -203,6 +216,7 @@ public class NaiveBayesNewsClassifier {
         Map<String, int[]> wordCounts = new HashMap<>();
         int[] classDocCounts = new int[numClasses];
         int[] classTokenCounts = new int[numClasses];
+        double alpha = properties.getNaiveBayesAlpha() > 0 ? properties.getNaiveBayesAlpha() : 1.0;
 
         for (LabeledExample ex : examples) {
             classDocCounts[ex.labelIndex]++;
@@ -213,17 +227,22 @@ public class NaiveBayesNewsClassifier {
             }
         }
 
+        int minGlobalTermFreq = Math.max(1, properties.getNaiveBayesMinGlobalTermFreq());
+        if (minGlobalTermFreq > 1) {
+            wordCounts.entrySet().removeIf(e -> Arrays.stream(e.getValue()).sum() < minGlobalTermFreq);
+        }
+
         int totalDocs = Arrays.stream(classDocCounts).sum();
         double[] classLogPrior = new double[numClasses];
         for (int c = 0; c < numClasses; c++) {
-            classLogPrior[c] = Math.log((classDocCounts[c] + 1.0) / (totalDocs + numClasses));
+            classLogPrior[c] = Math.log((classDocCounts[c] + alpha) / (totalDocs + (alpha * numClasses)));
         }
 
         int vocabSize = Math.max(1, wordCounts.size());
         Map<String, double[]> wordLogLikelihood = new HashMap<>(vocabSize * 2);
         double[] unknownWordLogLikelihood = new double[numClasses];
         for (int c = 0; c < numClasses; c++) {
-            unknownWordLogLikelihood[c] = Math.log(1.0 / (classTokenCounts[c] + vocabSize));
+            unknownWordLogLikelihood[c] = Math.log(alpha / (classTokenCounts[c] + (alpha * vocabSize)));
         }
 
         for (Map.Entry<String, int[]> entry : wordCounts.entrySet()) {
@@ -231,8 +250,8 @@ public class NaiveBayesNewsClassifier {
             int[] counts = entry.getValue();
             double[] logProbs = new double[numClasses];
             for (int c = 0; c < numClasses; c++) {
-                double num = counts[c] + 1.0;
-                double den = classTokenCounts[c] + vocabSize;
+                double num = counts[c] + alpha;
+                double den = classTokenCounts[c] + (alpha * vocabSize);
                 logProbs[c] = Math.log(num / den);
             }
             wordLogLikelihood.put(word, logProbs);

@@ -64,7 +64,7 @@ class UserFeedBackServiceImplTest {
         selected.setId(3);
 
         when(newsRepository.findById(1L)).thenReturn(Optional.of(news));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(userRepository.findByUsername("metehan")).thenReturn(Optional.of(user));
         when(categoryRepository.findById(3)).thenReturn(Optional.of(selected));
         when(userFeedBackRepository.save(any(UserFeedBack.class))).thenAnswer(inv -> {
             UserFeedBack f = inv.getArgument(0);

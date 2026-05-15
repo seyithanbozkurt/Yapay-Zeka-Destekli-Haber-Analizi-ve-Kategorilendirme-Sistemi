@@ -41,6 +41,7 @@ public class DataInitializer implements CommandLineRunner {
     private final NewsClassificationService newsClassificationService;
     private final PasswordEncoder passwordEncoder;
     private final NewsClassificationResultRepository newsClassificationResultRepository;
+    private final com.bitirme.service.CacheWarmupService cacheWarmupService;
 
     @Override
     public void run(String... args) {
@@ -72,6 +73,9 @@ public class DataInitializer implements CommandLineRunner {
             } else {
                 log.warn("No model version found, initial classification skipped.");
             }
+
+            // Redis cache'lerini otomatik ısıt
+            cacheWarmupService.warmupCaches();
         } catch (Exception e) {
             log.error("Error in initial news crawl or classification: {}", e.getMessage());
         }

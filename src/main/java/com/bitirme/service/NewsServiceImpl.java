@@ -13,6 +13,8 @@ import com.bitirme.repository.SourceRepository;
 import com.bitirme.util.NewsTitleNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"news_all", "news_by_id", "news_page"}, allEntries = true)
     public NewsResponse create(NewsCreateRequest request) {
         Source source = sourceRepository.findById(request.getSourceId())
                 .orElseThrow(() -> new com.bitirme.exception.NotFoundException("Kaynak bulunamadı: " + request.getSourceId()));
@@ -71,6 +74,7 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "news_by_id", key = "#id")
     public NewsResponse getById(Long id) {
         News news = newsRepository.findById(id)
                 .orElseThrow(() -> new com.bitirme.exception.NotFoundException("Haber bulunamadı: " + id));
@@ -79,6 +83,7 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("news_all")
     public List<NewsResponse> getAll() {
         return newsRepository.findAll().stream()
                 .map(this::toResponse)
@@ -86,7 +91,26 @@ public class NewsServiceImpl implements NewsService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "news_page", key = "#page + '_' + #size")
+    public com.bitirme.dto.news.NewsPageResponse getPaginated(int page, int size) {
+        org.springframework.data.domain.Page<News> newsPage = newsRepository.findAll(
+            org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "publishedAt"))
+        );
+        
+        return com.bitirme.dto.news.NewsPageResponse.builder()
+                .content(newsPage.getContent().stream().map(this::toResponse).toList())
+                .pageNumber(newsPage.getNumber())
+                .pageSize(newsPage.getSize())
+                .totalElements(newsPage.getTotalElements())
+                .totalPages(newsPage.getTotalPages())
+                .last(newsPage.isLast())
+                .build();
+    }
+
+    @Override
     @Transactional
+    @CacheEvict(value = {"news_all", "news_by_id", "news_page"}, allEntries = true)
     public NewsResponse update(Long id, NewsUpdateRequest request) {
         News news = newsRepository.findById(id)
                 .orElseThrow(() -> new com.bitirme.exception.NotFoundException("Haber bulunamadı: " + id));
@@ -142,6 +166,7 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"news_all", "news_by_id", "news_page"}, allEntries = true)
     public void delete(Long id) {
         if (!newsRepository.existsById(id)) {
             throw new com.bitirme.exception.NotFoundException("Haber bulunamadı: " + id);

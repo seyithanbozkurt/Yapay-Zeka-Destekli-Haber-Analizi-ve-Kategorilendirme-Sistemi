@@ -14,6 +14,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -48,6 +49,7 @@ public class DynamicNewsCrawlerService {
     );
     private static final Pattern ONLY_PUNCT_OR_DIGITS = Pattern.compile("^[\\p{Punct}\\d\\s]+$");
 
+    @CacheEvict(value = {"news_all", "news_by_id", "news_page"}, allEntries = true)
     public int crawlAllSources() {
         List<Source> activeSources = sourceRepository.findByActiveTrue();
         int totalFetched = 0;
@@ -66,6 +68,7 @@ public class DynamicNewsCrawlerService {
         return totalFetched;
     }
 
+    @CacheEvict(value = {"news_all", "news_by_id", "news_page"}, allEntries = true)
     public int crawlBreakingNews() {
         List<Source> sourcesWithBreakingNews = sourceRepository.findByActiveTrue().stream()
                 .filter(s -> s.getCrawlType() != null && s.getCrawlType().equals("breaking_news"))
@@ -529,7 +532,11 @@ public class DynamicNewsCrawlerService {
         }
 
         // Fallback
-        return element.text().trim();
+        String text = element.text().trim();
+        if (text.length() > 0) {
+            return text + " - Haberin detaylarına kaynaktan ulaşabilirsiniz.";
+        }
+        return "Haberin detaylarına kaynaktan ulaşabilirsiniz.";
     }
 
     private ArticleData fetchArticleData(String link, Element listElement, Source source) {
@@ -546,6 +553,15 @@ public class DynamicNewsCrawlerService {
 
             String articleTitle = extractTitleFromArticlePage(articleDoc, source);
             String articleContent = extractContentFromArticlePage(articleDoc, source);
+
+            // Cloudflare / Redirect detection: If article page title is generic and completely different from link text
+            if (fallbackTitle != null && fallbackTitle.length() > 10 && articleTitle != null) {
+                String[] words = fallbackTitle.split("\\s+");
+                if (words.length > 1 && !articleTitle.toLowerCase().contains(words[0].toLowerCase())) {
+                    // Sayfa yönlendirilmiş veya bloke edilmiş, listeleme sayfasındaki verileri kullan
+                    return new ArticleData(fallbackTitle, fallbackContent);
+                }
+            }
 
             if (articleTitle == null || articleTitle.isBlank()) {
                 articleTitle = fallbackTitle;

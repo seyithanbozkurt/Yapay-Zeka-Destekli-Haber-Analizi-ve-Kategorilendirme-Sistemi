@@ -8,6 +8,8 @@ import com.bitirme.exception.AlreadyExistsException;
 import com.bitirme.exception.NotFoundException;
 import com.bitirme.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"categories_all", "category_by_id"}, allEntries = true)
     public CategoryResponse create(CategoryCreateRequest request) {
         if (categoryRepository.existsByName(request.getName())) {
             throw new AlreadyExistsException("Kategori adı zaten kullanılıyor: " + request.getName());
@@ -37,6 +40,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "category_by_id", key = "#id")
     public CategoryResponse getById(Integer id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Kategori bulunamadı: " + id));
@@ -45,6 +49,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("categories_all")
     public List<CategoryResponse> getAll() {
         return categoryRepository.findAll().stream()
                 .map(this::toResponse)
@@ -53,6 +58,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"categories_all", "category_by_id"}, allEntries = true)
     public CategoryResponse update(Integer id, CategoryUpdateRequest request) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Kategori bulunamadı: " + id));
@@ -78,6 +84,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"categories_all", "category_by_id"}, allEntries = true)
     public void delete(Integer id) {
         if (!categoryRepository.existsById(id)) {
             throw new NotFoundException("Kategori bulunamadı: " + id);

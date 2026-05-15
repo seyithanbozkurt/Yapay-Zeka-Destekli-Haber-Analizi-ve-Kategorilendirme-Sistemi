@@ -8,8 +8,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import jakarta.annotation.PreDestroy;
-
 /**
  * JavaSparkContext bean (local mode). RDD tabanlı Spark MLlib bu context ile çalışır.
  */
@@ -18,12 +16,10 @@ import jakarta.annotation.PreDestroy;
 @Slf4j
 public class SparkConfig {
 
-    private JavaSparkContext sparkContext;
-
     @Lazy
-    @Bean
+    @Bean(destroyMethod = "close")
     public JavaSparkContext sparkContext(MlClassifierProperties properties) {
-        // Not: SecurityManager'ı runtime'da kurmak (System.setSecurityManager) Logback/Spring gibi kütüphanelerde
+        // Not: SecurityManager'ı runtime'da kurmak (System.setSecurityManager) bazı kütüphanelerde
         // izin hatalarına sebep olabiliyor. Spark için gereken "allow" davranışı JVM açılış argümanında
         // (-Djava.security.manager=allow) sağlanmalı.
         log.info(
@@ -40,17 +36,18 @@ public class SparkConfig {
                 .set("spark.driver.bindAddress", "127.0.0.1")
                 .set("spark.local.ip", "127.0.0.1")
                 .set("spark.local.hostname", "127.0.0.1")
-                .set("spark.ui.enabled", "false");
-        sparkContext = new JavaSparkContext(conf);
+                .set("spark.ui.enabled", "false")
+                .set("spark.default.parallelism", "2")
+                .set("spark.sql.shuffle.partitions", "2")
+                .set("spark.driver.allowMultipleContexts", "false")
+                .set("spark.hadoop.fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
+                // JRE Docker: lz4 codec sık "not available"; lzf/snappy daha güvenli
+                .set("spark.io.compression.codec", properties.getSparkIoCompressionCodec())
+                .set("spark.shuffle.spill.compress", "true")
+                .set("spark.shuffle.compress", "true");
+        JavaSparkContext ctx = new JavaSparkContext(conf);
+        ctx.setLogLevel("WARN");
         log.info("JavaSparkContext created with master: {}", properties.getSparkMaster());
-        return sparkContext;
-    }
-
-    @PreDestroy
-    public void close() {
-        if (sparkContext != null) {
-            sparkContext.close();
-            log.info("JavaSparkContext closed.");
-        }
+        return ctx;
     }
 }
