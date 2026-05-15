@@ -16,6 +16,8 @@ import com.bitirme.repository.NewsRepository;
 import com.bitirme.repository.UserFeedBackRepository;
 import com.bitirme.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,7 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"feedbacks_all", "feedback_by_id"}, allEntries = true)
     public UserFeedBackResponse create(UserFeedBackCreateRequest request, String username) {
         News news = newsRepository.findById(request.getNewsId())
                 .orElseThrow(() -> new NotFoundException("Haber bulunamadı: " + request.getNewsId()));
@@ -76,6 +79,7 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "feedback_by_id", key = "#id")
     public UserFeedBackResponse getById(Long id) {
         UserFeedBack feedback = userFeedBackRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Kullanıcı geri bildirimi bulunamadi: " + id));
@@ -84,6 +88,7 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("feedbacks_all")
     public List<UserFeedBackResponse> getAll() {
         return userFeedBackRepository.findAll().stream()
                 .map(this::toResponse)
@@ -92,6 +97,7 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"feedbacks_all", "feedback_by_id"}, allEntries = true)
     public UserFeedBackResponse update(Long id, UserFeedBackUpdateRequest request) {
         UserFeedBack feedback = userFeedBackRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Kullanıcı geri bildirimi bulunamadi: " + id));
@@ -128,6 +134,7 @@ public class UserFeedBackServiceImpl implements UserFeedBackService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"feedbacks_all", "feedback_by_id"}, allEntries = true)
     public void delete(Long id) {
         if (!userFeedBackRepository.existsById(id)) {
             throw new NotFoundException("Kullanıcı geri bildirimi bulunamadı: " + id);

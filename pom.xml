@@ -18,23 +18,72 @@
 		<scala.binary.version>2.12</scala.binary.version>
 		<spark.version>3.5.0</spark.version>
 		<lucene.version>9.11.0</lucene.version>
-		<!-- Spark 3.5 + Java 17+: StorageUtils / Netty için gerekli; test ve IDE'de de aynı bayraklar kullanılmalı -->
-		<spark.jvm.args>--add-opens=java.base/sun.nio.ch=ALL-UNNAMED -Djava.security.manager=allow</spark.jvm.args>
+		<!-- Spark 3.5 + Java 21: Netty/reflection + izole trainer ile uyumlu tam liste -->
+		<spark.jvm.args>
+			--add-opens=java.base/java.lang=ALL-UNNAMED
+			--add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+			--add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+			--add-opens=java.base/java.io=ALL-UNNAMED
+			--add-opens=java.base/java.net=ALL-UNNAMED
+			--add-opens=java.base/java.nio=ALL-UNNAMED
+			--add-opens=java.base/java.util=ALL-UNNAMED
+			--add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+			--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+			--add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+			--add-opens=java.base/sun.nio.cs=ALL-UNNAMED
+			--add-opens=java.base/sun.security.action=ALL-UNNAMED
+			--add-opens=java.base/sun.util.calendar=ALL-UNNAMED
+			-Djava.security.manager=allow
+		</spark.jvm.args>
 	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
-
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+			<version>3.5.6</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- Spark ile uyumlu tek SLF4J bağlaması (Logback yerine Log4j2). -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-log4j2</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -49,6 +98,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.springdoc</groupId>
@@ -65,6 +120,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         
         <!-- JWT -->
@@ -130,6 +191,11 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<argLine>${spark.jvm.args}</argLine>
+					<!-- Spark SparkConf companion init Utils.localIpAddress → getifaddrs; sandbox/cursor ortamında izin yok -->
+					<environmentVariables>
+						<SPARK_LOCAL_IP>127.0.0.1</SPARK_LOCAL_IP>
+						<SPARK_LOCAL_HOSTNAME>127.0.0.1</SPARK_LOCAL_HOSTNAME>
+					</environmentVariables>
 				</configuration>
 			</plugin>
 			<plugin>

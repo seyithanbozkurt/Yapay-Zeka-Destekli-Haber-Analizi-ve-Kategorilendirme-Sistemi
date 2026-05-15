@@ -13,6 +13,8 @@ import com.bitirme.repository.ModelVersionRepository;
 import com.bitirme.repository.NewsClassificationResultRepository;
 import com.bitirme.repository.NewsRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
 
     @Override
     @Transactional
+    @CacheEvict(value = {"classification_results_all", "classification_result_by_id", "classification_results_by_news"}, allEntries = true)
     public NewsClassificationResultResponse create(NewsClassificationResultCreateRequest request) {
         News news = newsRepository.findById(request.getNewsId())
                 .orElseThrow(() -> new NotFoundException("Haber bulunamadı: " + request.getNewsId()));
@@ -52,6 +55,7 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "classification_result_by_id", key = "#id")
     public NewsClassificationResultResponse getById(Long id) {
         NewsClassificationResult result = newsClassificationResultRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Sınıflandırma sonucu bulunamadı: " + id));
@@ -60,6 +64,7 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("classification_results_all")
     public List<NewsClassificationResultResponse> getAll() {
         return newsClassificationResultRepository.findAll().stream()
                 .map(this::toResponse)
@@ -68,6 +73,7 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
 
     @Override
     @Transactional
+    @CacheEvict(value = {"classification_results_all", "classification_result_by_id", "classification_results_by_news"}, allEntries = true)
     public NewsClassificationResultResponse update(Long id, NewsClassificationResultUpdateRequest request) {
         NewsClassificationResult result = newsClassificationResultRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Sınıflandırma sonucu bulunamadı: " + id));
@@ -98,6 +104,7 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
 
     @Override
     @Transactional
+    @CacheEvict(value = {"classification_results_all", "classification_result_by_id", "classification_results_by_news"}, allEntries = true)
     public void delete(Long id) {
         if (!newsClassificationResultRepository.existsById(id)) {
             throw new NotFoundException("Sınıflandırma sonucu bulunamadı: " + id);
@@ -107,6 +114,7 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
     
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "classification_results_by_news", key = "#newsId")
     public List<NewsClassificationResultResponse> getByNewsId(Long newsId) {
         return newsClassificationResultRepository.findByNewsId(newsId).stream()
                 .map(this::toResponse)
@@ -117,6 +125,7 @@ public class NewsClassificationResultServiceImpl implements NewsClassificationRe
      * Mevcut sınıflandırma sonuçlarından yola çıkarak news_categories join tablosunu doldurur.
      */
     @Transactional
+    @CacheEvict(value = {"classification_results_all", "classification_result_by_id", "classification_results_by_news", "news_all", "news_by_id", "news_page"}, allEntries = true)
     public int backfillNewsCategories() {
         var results = newsClassificationResultRepository.findAll();
         int linked = 0;

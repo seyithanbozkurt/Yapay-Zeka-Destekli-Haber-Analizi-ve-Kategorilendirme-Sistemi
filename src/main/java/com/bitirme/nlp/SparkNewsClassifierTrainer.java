@@ -4,6 +4,7 @@ import com.bitirme.entity.News;
 import com.bitirme.entity.NewsClassificationResult;
 import com.bitirme.nlp.config.MlClassifierProperties;
 import com.bitirme.repository.NewsClassificationResultRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.JavaRDD;
@@ -19,8 +20,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import scala.Tuple2;
 
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 /**
@@ -134,13 +137,27 @@ public class SparkNewsClassifierTrainer {
             }
         }
 
-        Path dir = Path.of(properties.getModelPath());
+        Path dir = Path.of(properties.getModelPath()).toAbsolutePath().normalize();
         Path modelPath = dir.resolve("pipeline");
         Path labelsPath = dir.resolve("labels.txt");
         try {
             Files.createDirectories(modelPath);
             model.save(jsc.sc(), modelPath.toString());
             Files.write(labelsPath, categoryNames);
+            NbModelExport nbExport = new NbModelExport(
+                    model.labels(),
+                    model.pi(),
+                    model.theta(),
+                    model.modelType(),
+                    properties.getNumFeatures() > 0 ? properties.getNumFeatures() : (1 << 18));
+            Path nbOut = dir.resolve("nb-export.json");
+            Path nbTmp = dir.resolve("nb-export.json.tmp");
+            new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(nbTmp.toFile(), nbExport);
+            try {
+                Files.move(nbTmp, nbOut, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (Exception ignored) {
+                Files.move(nbTmp, nbOut, StandardCopyOption.REPLACE_EXISTING);
+            }
             log.info("Spark MLlib model saved. Samples: {}, Categories: {}", examples.size(), categoryNames.size());
         } catch (Exception e) {
             log.error("Failed to save model: {}", e.getMessage());
@@ -189,7 +206,9 @@ public class SparkNewsClassifierTrainer {
         return terms;
     }
 
-    private static class LabeledExample {
+    private static class LabeledExample implements Serializable {
+        private static final long serialVersionUID = 1L;
+
         final double label;
         final List<String> terms;
 

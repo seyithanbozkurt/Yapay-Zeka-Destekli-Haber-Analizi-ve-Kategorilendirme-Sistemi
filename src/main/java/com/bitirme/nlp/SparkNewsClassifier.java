@@ -2,13 +2,12 @@ package com.bitirme.nlp;
 
 import com.bitirme.entity.News;
 import com.bitirme.nlp.config.MlClassifierProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.mllib.classification.NaiveBayesModel;
 import org.apache.spark.mllib.feature.HashingTF;
 import org.apache.spark.mllib.linalg.Vector;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -27,8 +26,8 @@ import java.util.*;
 @Slf4j
 public class SparkNewsClassifier {
 
-    // SparkContext'i init anında zorla kurmayalım; model yükleme sırasında deneyeceğiz.
-    private final ObjectProvider<JavaSparkContext> sparkContextProvider;
+    // Parquet/NaiveBayesModel.load ana JVM'de Spark SQL + Hibernate ANTLR çakışması yaratır; yalnızca nb-export.json.
+    private final ObjectMapper objectMapper;
     private final TurkishTextPreprocessor preprocessor;
     private final MlClassifierProperties properties;
 
@@ -57,36 +56,51 @@ public class SparkNewsClassifier {
      * Model dizininden PipelineModel ve label listesini yükler.
      */
     public void loadModel() {
-        Path dir = Path.of(properties.getModelPath());
-        Path modelPath = dir.resolve("pipeline");
+        Path dir = Path.of(properties.getModelPath()).toAbsolutePath().normalize();
         Path labelsPath = dir.resolve("labels.txt");
-        if (!Files.isDirectory(modelPath) || !Files.exists(labelsPath)) {
-            log.warn("ML model not found at {} or labels.txt missing. Using keyword fallback.", modelPath);
+        Path exportPath = dir.resolve("nb-export.json");
+
+        if (!Files.exists(labelsPath)) {
+            log.warn("labels.txt missing under {}. Using keyword fallback.", dir);
+            model = null;
+            hashingTF = null;
+            labelNames = Collections.emptyList();
             return;
         }
-        try {
-            JavaSparkContext sc = sparkContextProvider.getIfAvailable();
-            if (sc == null) {
-                log.warn("SparkContext unavailable; skipping Spark model load.");
-                model = null;
-                hashingTF = null;
-                labelNames = Collections.emptyList();
-                return;
-            }
 
-            model = NaiveBayesModel.load(sc.sc(), modelPath.toString());
-            hashingTF = new HashingTF(properties.getNumFeatures() > 0 ? properties.getNumFeatures() : (1 << 18));
-            labelNames = Files.readAllLines(labelsPath);
-            if (labelNames.isEmpty()) {
-                log.warn("labels.txt is empty.");
-                model = null;
-            } else {
-                log.info("ML model loaded. {} categories.", labelNames.size());
+        // Önce nb-export.json: parquet/SQL yolu NaiveBayesModel.load → Hibernate ile ANTLR çakışması
+        if (Files.exists(exportPath)) {
+            try {
+                NbModelExport exp = objectMapper.readValue(exportPath.toFile(), NbModelExport.class);
+                String mt = exp.modelType() != null && !exp.modelType().isBlank()
+                        ? exp.modelType()
+                        : "multinomial";
+                model = new NaiveBayesModel(exp.labels(), exp.pi(), exp.theta(), mt);
+                int nf = exp.numFeatures() > 0
+                        ? exp.numFeatures()
+                        : (properties.getNumFeatures() > 0 ? properties.getNumFeatures() : (1 << 18));
+                hashingTF = new HashingTF(Math.max(1, nf));
+                labelNames = Files.readAllLines(labelsPath);
+                if (labelNames.isEmpty()) {
+                    log.warn("labels.txt is empty.");
+                    model = null;
+                    hashingTF = null;
+                } else {
+                    log.info("ML model loaded from nb-export.json (Spark SQL yok). {} categories.", labelNames.size());
+                }
+                return;
+            } catch (Throwable e) {
+                log.warn("nb-export.json okunamadı: {}", e.toString());
             }
-        } catch (Throwable e) {
-            log.error("Failed to load ML model from {}: {}", modelPath, e.getMessage());
-            model = null;
         }
+
+        log.warn(
+                "nb-export.json yok veya geçersiz; ana JVM'de parquet yüklenmez (ANTLR/Spark SQL). "
+                        + "POST /api/ml/train ile nb-export.json oluşturun. modelDir={}",
+                dir);
+        model = null;
+        hashingTF = null;
+        labelNames = Collections.emptyList();
     }
 
     /**
@@ -105,13 +119,15 @@ public class SparkNewsClassifier {
             List<String> terms = expandNGrams(tokens, Math.max(properties.getNGramMin(), properties.getNGramMax()));
             if (terms.isEmpty()) return Optional.empty();
             Vector features = hashingTF.transform(terms);
-            int predIndex = (int) model.predict(features);
-            if (predIndex < 0 || predIndex >= labelNames.size()) {
+            double predictedLabel = model.predict(features);
+            double[] ls = model.labels();
+            int idx = Arrays.binarySearch(ls, predictedLabel);
+            if (idx < 0 || idx >= labelNames.size()) {
                 return Optional.of(MlClassificationResult.of("Diğer", 0.1));
             }
-            String categoryName = labelNames.get(predIndex);
+            String categoryName = labelNames.get(idx);
             // mllib NaiveBayesModel doğrudan olasılık döndürmediği için sabit güven.
-            double confidence = 0.70;
+            double confidence = 0.85;
 
             if (confidence < properties.getMinConfidence()) {
                 categoryName = "Diğer";

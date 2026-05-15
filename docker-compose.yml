@@ -7,13 +7,54 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/haberdb
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: bulunmaz3457
-      # Spark (Java 21): SecurityManager uyumu; konteyner icinde makul heap
-      JAVA_TOOL_OPTIONS: "-Djava.security.manager=allow -XX:+UseContainerSupport -Xmx2048m"
+      # Java 21 + Spark/Netty; pom'daki spark.jvm.args ile uyumlu
+      JAVA_TOOL_OPTIONS: >-
+        --add-opens=java.base/java.lang=ALL-UNNAMED
+        --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+        --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+        --add-opens=java.base/java.io=ALL-UNNAMED
+        --add-opens=java.base/java.net=ALL-UNNAMED
+        --add-opens=java.base/java.nio=ALL-UNNAMED
+        --add-opens=java.base/java.util=ALL-UNNAMED
+        --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+        --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+        --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+        --add-opens=java.base/sun.nio.cs=ALL-UNNAMED
+        --add-opens=java.base/sun.security.action=ALL-UNNAMED
+        --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
+        -Djava.security.manager=allow
+        -XX:+UseContainerSupport
+        -Xmx3072m
       # Izole Spark egitimi: imajdaki antlr4-runtime-4.9.3.jar (Dockerfile ile /app/deps altinda)
+      # Spark Utils.localIpAddress / SparkConf statik başlatma (getifaddrs)
+      SPARK_LOCAL_IP: "127.0.0.1"
+      SPARK_LOCAL_HOSTNAME: "127.0.0.1"
+      ML_CLASSIFIER_SPARK_IO_COMPRESSION_CODEC: lzf
       ML_CLASSIFIER_ANTLR493_JAR: /app/deps/antlr4-runtime-4.9.3.jar
+      ML_CLASSIFIER_MIN_CONFIDENCE: 0.55
+      ML_CLASSIFIER_KEYWORD_CONFIDENCE_FLOOR: "0.99"
+      # Spark egitimini timeout'a dusurmeyecek dengeli ayarlar
+      ML_CLASSIFIER_SPARK_MASTER: local[2]
+      ML_CLASSIFIER_N_GRAM_MAX: 2
+      ML_CLASSIFIER_NUM_FEATURES: 65536
+      ML_CLASSIFIER_SPARK_MAX_TRAINING_SAMPLES: 60
+      ML_CLASSIFIER_RUN_EVALUATION_AFTER_TRAIN: false
+      ML_CLASSIFIER_SPARK_ISOLATED_TRAIN_TIMEOUT_MS: 180000
+      # Redis cache baglantisi
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     volumes:
       # Egitilen Spark modeli (pipeline + labels.txt) konteyner yenilense de kalsin
       - ./data/ml-model:/app/data/ml-model
     ports:
       - "8989:8989"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: haber-redis
+    ports:
+      - "6380:6379"
     restart: unless-stopped

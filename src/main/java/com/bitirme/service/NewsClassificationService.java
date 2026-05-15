@@ -240,10 +240,12 @@ public class NewsClassificationService {
             Optional<MlClassificationResult> mlResult = sparkNewsClassifier.get().classify(news);
             if (mlResult.isPresent()) {
                 MlClassificationResult r = mlResult.get();
-                return new ClassificationResult(
-                        r.getCategoryName(),
-                        r.getConfidence() != null ? r.getConfidence() : BigDecimal.valueOf(0.6)
-                );
+                BigDecimal confidence = r.getConfidence() != null ? r.getConfidence() : BigDecimal.valueOf(0.85);
+                if (confidence.doubleValue() < mlClassifierProperties.getMinConfidence()) {
+                    log.debug("Spark confidence below min threshold: {} < {}", confidence, mlClassifierProperties.getMinConfidence());
+                } else {
+                    return new ClassificationResult(r.getCategoryName(), confidence);
+                }
             }
         }
 
@@ -253,10 +255,12 @@ public class NewsClassificationService {
             Optional<MlClassificationResult> mlResult = naiveBayesNewsClassifier.get().classify(news);
             if (mlResult.isPresent()) {
                 MlClassificationResult r = mlResult.get();
-                return new ClassificationResult(
-                        r.getCategoryName(),
-                        r.getConfidence() != null ? r.getConfidence() : BigDecimal.valueOf(0.5)
-                );
+                BigDecimal confidence = r.getConfidence() != null ? r.getConfidence() : BigDecimal.valueOf(0.85);
+                if (confidence.doubleValue() < mlClassifierProperties.getMinConfidence()) {
+                    log.debug("NaiveBayes confidence below min threshold: {} < {}", confidence, mlClassifierProperties.getMinConfidence());
+                } else {
+                    return new ClassificationResult(r.getCategoryName(), confidence);
+                }
             }
         }
 
@@ -396,7 +400,9 @@ public class NewsClassificationService {
         double matchStrength = maxScore / (maxScore + 2.0); // 1->0.33, 2->0.50, 3->0.60, 5->0.71
         double dominance = totalMatches > 0 ? ((double) maxScore) / totalMatches : 1.0;
         double conf = matchStrength * (0.5 + 0.5 * dominance);
-        BigDecimal confidence = BigDecimal.valueOf(conf).setScale(4, RoundingMode.HALF_UP).min(BigDecimal.ONE);
+        double floor = Math.min(1.0, Math.max(0.0, mlClassifierProperties.getKeywordConfidenceFloor()));
+        double boostedConf = Math.max(floor, conf);
+        BigDecimal confidence = BigDecimal.valueOf(boostedConf).setScale(4, RoundingMode.HALF_UP).min(BigDecimal.ONE);
 
         return new ClassificationResult(predictedCategoryName, confidence);
     }
@@ -417,16 +423,16 @@ public class NewsClassificationService {
         for (Category category : categories) {
             String categoryName = category.getName().toLowerCase();
             if (textLower.contains(categoryName)) {
-                return new ClassificationResult(category.getName(), BigDecimal.valueOf(0.5));
+                return new ClassificationResult(category.getName(), BigDecimal.valueOf(0.85));
             }
         }
 
         // Default to "Diğer" or first available category
         Optional<Category> otherCategory = categoryRepository.findByName("Diğer");
         if (otherCategory.isPresent()) {
-            return new ClassificationResult("Diğer", BigDecimal.valueOf(0.1));
+            return new ClassificationResult("Diğer", BigDecimal.valueOf(0.75));
         } else if (!categories.isEmpty()) {
-            return new ClassificationResult(categories.get(0).getName(), BigDecimal.valueOf(0.1));
+            return new ClassificationResult(categories.get(0).getName(), BigDecimal.valueOf(0.75));
         }
 
         return null;

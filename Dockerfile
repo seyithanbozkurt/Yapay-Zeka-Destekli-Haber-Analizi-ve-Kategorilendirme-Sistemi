@@ -17,4 +17,4 @@ COPY --from=build /app/deps/antlr4-runtime-4.9.3.jar /app/deps/antlr4-runtime-4.
 ENV ML_CLASSIFIER_ANTLR493_JAR=/app/deps/antlr4-runtime-4.9.3.jar
 EXPOSE 8989
 # Spark driver (local): JDK 21 ile SecurityManager; docker-compose'da JAVA_TOOL_OPTIONS ile de verilebilir
-ENTRYPOINT ["java","-Djava.security.manager=allow","-jar","app.jar"]
+ENTRYPOINT ["java","--add-opens=java.base/sun.nio.ch=ALL-UNNAMED","-Djava.security.manager=allow","-jar","app.jar"]
