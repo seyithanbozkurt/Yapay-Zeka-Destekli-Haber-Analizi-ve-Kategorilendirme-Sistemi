@@ -26,6 +26,9 @@ public class NewsResponse {
     @Schema(description = "Orijinal haber URL'i", example = "https://www.hurriyet.com.tr/ekonomi/haber")
     private String originalUrl;
     
+    @Schema(description = "Haber gorsel URL'i", example = "https://site.com/images/haber.jpg")
+    private String imageUrl;
+    
     @Schema(description = "Haber dili", example = "tr")
     private String language;
     

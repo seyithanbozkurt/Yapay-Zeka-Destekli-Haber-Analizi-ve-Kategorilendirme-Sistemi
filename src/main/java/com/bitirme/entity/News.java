@@ -39,6 +39,9 @@ public class News {
 
     @Column(name = "original_url", length = 500)
     private String originalUrl;
+    
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
 
     @Column(length = 10)
     private String language = "tr";

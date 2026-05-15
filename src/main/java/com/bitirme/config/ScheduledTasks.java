@@ -4,6 +4,9 @@ import com.bitirme.entity.ModelVersion;
 import com.bitirme.repository.ModelVersionRepository;
 import com.bitirme.repository.NewsClassificationResultRepository;
 import com.bitirme.repository.NewsRepository;
+import com.bitirme.repository.UserReadHistoryRepository;
+import com.bitirme.repository.UserFeedBackRepository;
+import com.bitirme.repository.UserSavedNewsRepository;
 import com.bitirme.service.NewsClassificationService;
 import com.bitirme.service.NewsCrawlerService;
 import jakarta.persistence.EntityManager;
@@ -26,6 +29,9 @@ public class ScheduledTasks {
     private final NewsRepository newsRepository;
     private final NewsClassificationResultRepository newsClassificationResultRepository;
     private final com.bitirme.service.CacheWarmupService cacheWarmupService;
+    private final UserFeedBackRepository userFeedBackRepository;
+    private final UserSavedNewsRepository userSavedNewsRepository;
+    private final UserReadHistoryRepository userReadHistoryRepository;
     
     @PersistenceContext
     private EntityManager entityManager;
@@ -94,12 +100,18 @@ public class ScheduledTasks {
             // Önce mevcut haberleri say ve bilgilerini kaydet
             long newsCount = newsRepository.count();
             long classificationCount = newsClassificationResultRepository.count();
+            long feedbackCount = userFeedBackRepository.count();
+            long savedCount = userSavedNewsRepository.count();
+            long readHistoryCount = userReadHistoryRepository.count();
             
             // Eski haberlerin detaylı bilgilerini log'la
             log.info("═══════════════════════════════════════════════════════════════");
             log.info("📊 SİLİNECEK HABER İSTATİSTİKLERİ:");
             log.info("   • Toplam haber sayısı: {}", newsCount);
             log.info("   • Toplam sınıflandırma sonucu: {}", classificationCount);
+            log.info("   • Toplam kullanıcı geri bildirimi: {}", feedbackCount);
+            log.info("   • Toplam kaydedilen haber: {}", savedCount);
+            log.info("   • Toplam okuma geçmişi kaydı: {}", readHistoryCount);
             
             if (newsCount > 0) {
                 // Kaynak bazında dağılım
@@ -126,9 +138,21 @@ public class ScheduledTasks {
             }
             log.info("═══════════════════════════════════════════════════════════════");
             
-            // Önce sınıflandırma sonuçlarını sil (foreign key constraint için)
+            // Önce sınıflandırma sonuçlarını sil (news'e FK)
             newsClassificationResultRepository.deleteAll();
             log.info("✅ Deleted {} news classification results", classificationCount);
+
+            // Kullanıcı geri bildirimleri habere FK verir; haber silmeden önce kaldırılmalı
+            userFeedBackRepository.deleteAll();
+            log.info("✅ Deleted {} user feedback records", feedbackCount);
+
+            // Kullanıcı kaydedilen haberleri habere FK verir
+            userSavedNewsRepository.deleteAll();
+            log.info("✅ Deleted {} saved news records", savedCount);
+
+            // Okuma geçmişi habere FK verir
+            userReadHistoryRepository.deleteAll();
+            log.info("✅ Deleted {} read history records", readHistoryCount);
 
             // Sonra haberleri sil
             newsRepository.deleteAll();

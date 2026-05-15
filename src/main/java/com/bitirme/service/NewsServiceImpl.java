@@ -15,6 +15,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +59,7 @@ public class NewsServiceImpl implements NewsService {
         news.setNormalizedTitle(normalizedTitle);
         news.setContent(request.getContent());
         news.setOriginalUrl(request.getOriginalUrl());
+        news.setImageUrl(request.getImageUrl());
         news.setLanguage(request.getLanguage() != null ? request.getLanguage() : "tr");
         news.setPublishedAt(request.getPublishedAt());
         news.setProcessed(request.getProcessed() != null ? request.getProcessed() : false);
@@ -92,6 +97,7 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     @Transactional(readOnly = true)
+
     @Cacheable(value = "news_page", key = "#page + '_' + #size")
     public com.bitirme.dto.news.NewsPageResponse getPaginated(int page, int size) {
         org.springframework.data.domain.Page<News> newsPage = newsRepository.findAll(
@@ -106,6 +112,20 @@ public class NewsServiceImpl implements NewsService {
                 .totalPages(newsPage.getTotalPages())
                 .last(newsPage.isLast())
                 .build();
+
+    public Page<NewsResponse> getPage(int page, int size, String search, String sourceName, String categoryName) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.max(Math.min(size, 100), 1);
+        // Sıralama findPageWithFilters native SQL içinde (published_at, id); çift ORDER BY oluşmasın diye Sort yok.
+        Pageable pageable = PageRequest.of(safePage, safeSize);
+        String safeSearch = (search == null || search.isBlank()) ? null : search.trim();
+        String safeSourceName = (sourceName == null || sourceName.isBlank()) ? null : sourceName.trim();
+        String safeCategoryName = (categoryName == null || categoryName.isBlank()) ? null : categoryName.trim();
+
+        return newsRepository
+                .findPageWithFilters(safeSearch, safeSourceName, safeCategoryName, pageable)
+                .map(this::toResponse);
+
     }
 
     @Override
@@ -137,6 +157,10 @@ public class NewsServiceImpl implements NewsService {
 
         if (request.getOriginalUrl() != null) {
             news.setOriginalUrl(truncate(request.getOriginalUrl(), 500));
+        }
+        
+        if (request.getImageUrl() != null) {
+            news.setImageUrl(request.getImageUrl());
         }
 
         if (request.getLanguage() != null) {
@@ -186,6 +210,7 @@ public class NewsServiceImpl implements NewsService {
         response.setTitle(news.getTitle());
         response.setContent(news.getContent());
         response.setOriginalUrl(news.getOriginalUrl());
+        response.setImageUrl(news.getImageUrl());
         response.setLanguage(news.getLanguage());
         response.setPublishedAt(news.getPublishedAt());
         response.setProcessed(news.getProcessed());

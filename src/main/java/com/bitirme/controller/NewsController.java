@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -63,6 +64,18 @@ public class NewsController {
             @RequestParam(defaultValue = "10") int size) {
         com.bitirme.dto.news.NewsPageResponse response = newsService.getPaginated(page, size);
         return ResponseEntity.ok(ApiResponse.success(response));
+    @GetMapping("/page")
+    @Operation(summary = "Haberleri sayfali listele", description = "Haberleri page ve size parametreleriyle sayfali getirir")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Sayfali haber listesi başarıyla getirildi")
+    public ResponseEntity<ApiResponse<Page<NewsResponse>>> getPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sourceName,
+            @RequestParam(required = false) String categoryName
+    ) {
+        Page<NewsResponse> responsePage = newsService.getPage(page, size, search, sourceName, categoryName);
+        return ResponseEntity.ok(ApiResponse.success(responsePage));
     }
 
     @PutMapping

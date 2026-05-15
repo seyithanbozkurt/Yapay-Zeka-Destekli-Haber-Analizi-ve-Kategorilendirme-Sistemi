@@ -1,6 +1,7 @@
 package com.bitirme.controller;
 
 import com.bitirme.dto.auth.AuthResponse;
+import com.bitirme.dto.auth.ChangePasswordRequest;
 import com.bitirme.dto.auth.LoginRequest;
 import com.bitirme.dto.auth.RegisterRequest;
 import com.bitirme.dto.common.ApiResponse;
@@ -41,6 +42,21 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
         return ResponseEntity.ok(ApiResponse.success("Kayıt başarılı", response));
+    }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "Şifre değiştir", description = "Giriş yapan kullanıcının şifresini değiştirir.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Şifre başarıyla değiştirildi"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Geçersiz istek"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Mevcut şifre hatalı")
+    })
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        authService.changePassword(authentication.getName(), request);
+        return ResponseEntity.ok(ApiResponse.success("Şifre başarıyla değiştirildi", null));
     }
 }
 
